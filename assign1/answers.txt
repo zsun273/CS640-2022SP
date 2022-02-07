@@ -3,10 +3,10 @@ My answer/prediction:
 The latency between h1 and h4 would be the sum of latency of Link L1, L2 and L3.
 The throughput between h1 and h4 would be the minimum throughput of Link L1, L2 and L3.
 
-The average RTT is:      . And the sum of RTT of L1, L2, L3 is:     .
-The measured throughput is, which is very close to   .
-My prediction is mostly correct.
-
+The average RTT is: 161.339ms. And the sum of RTT of L1, L2, L3 is: 80.694+20.590+60.858=162.142ms.
+The measured throughput is 1.809 Mbps, which is very close to L1's throughtput 1.893 Mbps.
+And L1's throughout is the smallest among them. 
+My prediction is mostly correct. Explanation: to send packets from h1 to h4, we need to go through Link L1, L2, and L3, so the latency will be close to the cumulative latency of all three links. Since L1's throughput is the smallest among them, we will encounter a bottleneck at Link L1. Even though L2 and L3 have higher throughput, they cannot be fully utilized because of the bottleneck.
 
 
 Q3:
@@ -15,4 +15,5 @@ Two pairs: I expect latency to be larger than what we have for one pair, and thr
 Three pairs: I expect latency to be larger than what we have for two pairs, and throughput be smaller than what we have for two pairs.
 
 
+Q4:
   
