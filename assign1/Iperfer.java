@@ -111,7 +111,7 @@ public class Iperfer {
             e.printStackTrace();
         }
 
-        rate = (8*kilobytesSend) / (10e6 * time);
+        rate = (8*kilobytesSend) / (1e6 * time);
         System.out.println("sent=" + kilobytesSend/1000 + " KB rate=" + rate + " Mbps");
     }
 
@@ -139,7 +139,7 @@ public class Iperfer {
         }
 
         time = (endTime-startTime)/1000; // convert time into seconds
-        rate = (8*received)/(10e6 * time);
+        rate = (8*received)/(1e6 * time);
         System.out.println("received=" + received/1000 + " KB rate=" + rate + " Mbps");
     }
 }

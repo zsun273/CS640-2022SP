@@ -11,9 +11,11 @@ My prediction is mostly correct. Explanation: to send packets from h1 to h4, we 
 
 Q3:
 When multiple hosts connected to s1 want to talk to hosts connected to s4 simultaneously:
-Two pairs: I expect latency to be larger than what we have for one pair, and throughput be smaller than what we have for one pair.
-Three pairs: I expect latency to be larger than what we have for two pairs, and throughput be smaller than what we have for two pairs.
+Two pairs: I expect latency to be similar to what we have for one pair, and throughput be smaller than what we have for one pair.
+Three pairs: I expect latency to be similar to what we have for two pairs, and throughput be smaller than what we have for two pairs.
 
 
 Q4:
+For h1-h4: I expect the latency will be similar to what we have in Q2 and the throughput will be smaller.
+For h5-h6: I expect the latency to be similar to what we have in Q1 and the throughput will be smaller.
   
