@@ -1,0 +1,18 @@
+Q2: 
+My answer/prediction:
+The latency between h1 and h4 would be the sum of latency of Link L1, L2 and L3.
+The throughput between h1 and h4 would be the minimum throughput of Link L1, L2 and L3.
+
+The average RTT is:      . And the sum of RTT of L1, L2, L3 is:     .
+The measured throughput is, which is very close to   .
+My prediction is mostly correct.
+
+
+
+Q3:
+When multiple hosts connected to s1 want to talk to hosts connected to s4 simultaneously:
+Two pairs: I expect latency to be larger than what we have for one pair, and throughput be smaller than what we have for one pair.
+Three pairs: I expect latency to be larger than what we have for two pairs, and throughput be smaller than what we have for two pairs.
+
+
+  
