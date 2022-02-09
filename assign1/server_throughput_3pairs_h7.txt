@@ -1,2 +1,2 @@
 Run server here
-received=9658.0 KB rate=0.30960089757974035 Mbps
+received=12457.0 KB rate=3.6357533746807733 Mbps
