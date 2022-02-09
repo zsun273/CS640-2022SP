@@ -97,13 +97,15 @@ public class Iperfer {
         double kilobytesSend = 0;
         double rate = 0;
         byte[] packet = new byte[1000];
-        long endTime = System.currentTimeMillis() + 1000*time;
+	double endTime = 0;
+	double startTime = System.currentTimeMillis();
         try{
             Socket clientSocket = new Socket(hostname, portNumber);
-            while(System.currentTimeMillis() < endTime){
+            while(System.currentTimeMillis() < startTime + 1000*time){
                 clientSocket.getOutputStream().write(packet);
                 kilobytesSend += 1000;
             }
+	    endTime = System.currentTimeMillis();
             clientSocket.close();
         } catch (UnknownHostException e) {
             e.printStackTrace();
@@ -111,7 +113,7 @@ public class Iperfer {
             e.printStackTrace();
         }
 
-        rate = (8*kilobytesSend) / (1e6 * time);
+        rate = (8*kilobytesSend) / (1000 * (endTime-startTime));
         System.out.println("sent=" + kilobytesSend/1000 + " KB rate=" + rate + " Mbps");
     }
 
