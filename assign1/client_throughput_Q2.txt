@@ -1,2 +1,0 @@
-Run client here
-sent=55725.0 KB rate=20.013468013468014 Mbps

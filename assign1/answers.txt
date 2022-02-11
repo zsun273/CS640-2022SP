@@ -1,4 +1,7 @@
-Q2: 
+IMPORTANT NOTE:
+ALL the throughput numbers in our answers are the average throughput measured at server host and client host.
+
+Q2:
 My answer/prediction:
 The latency between h1 and h4 would be the sum of latency of Link L1, L2 and L3.
 The throughput between h1 and h4 would be the minimum throughput of Link L1, L2 and L3.
@@ -9,18 +12,77 @@ Expected:
   
 Measured:
   Latency: 80.67ms (average RTT is: 161.339ms). And the sum of RTT of L1, L2, L3 is: 80.694+20.590+60.858=162.142ms.
-  Throughput: Mbps, which is very close to L1's throughtput  Mbps. And L1's throughout is the smallest among them. 
+  Throughput: 19.29 Mbps, which is very close to L1's throughput 20.39 Mbps. And L1's throughout is the smallest among three.
 
 My prediction is mostly correct. 
-Explanation: to send packets from h1 to h4, we need to go through Link L1, L2, and L3, so the latency will be close to the cumulative latency of all three links. Since L1's throughput is the smallest among them, we will encounter a bottleneck at Link L1. Even though L2 and L3 have higher throughput, they cannot be fully utilized because of the bottleneck.
+Explanation: to send packets from h1 to h4, we need to go through Link L1, L2, and L3, so the latency will be close to the cumulative latency of all three links.
+Since L1's throughput is the smallest among them, we will encounter a bottleneck at Link L1. Even though L2 and L3 have higher throughput,
+they cannot be fully utilized because of the bottleneck.
 
 
 Q3: When multiple hosts connected to s1 want to talk to hosts connected to s4 simultaneously:
 Two pairs: I expect latency to be similar to what we have for one pair, and throughput be smaller than what we have for one pair.
 Three pairs: I expect latency to be similar to what we have for two pairs, and throughput be smaller than what we have for two pairs.
 
+For Two Pairs of Hosts in the Network:
+Expected for h1 - h4:           Expected for h7 - h9:
+  Latency: 80 ms                    Latency: 80 ms
+  Throughput: 10 Mbps               Throughput: 10 Mbps
+
+Measured for h1 - h4:                       Measured for h7 - h9:
+  Latency: 80.69 ms (avg RTT 161.379ms)         Latency: 80.75 ms (avg RTT 161.531ms)
+  Throughput: 6.4215 Mbps                       Throughput: 14.645 Mbps
+
+For Three Pairs of Hosts in the Network:
+Expected for h1 - h4:           Expected for h7 - h9:              Expected for h8 - h10:
+  Latency: 80 ms                    Latency: 80 ms                      Latency: 80 ms
+  Throughput: 6.67 Mbps             Throughput: 6.67 Mbps               Throughput: 6.67 Mbps
+
+Measured for h1 - h4:                       Measured for h7 - h9:                           Measured for h8 - h10:
+  Latency: 80.82 ms (avg RTT 161.632ms)         Latency: 80.78 ms (avg RTT 161.557ms)           Latency: 81.10 ms (avg RTT 162.202ms)
+  Throughput: 2.962 Mbps                        Throughput: 4.033 Mbps                          Throughput: 14.075 Mbps
+
+
+My prediction for the latency part is mostly correct. Latency is still close to the sum of latencies along the path.
+Latency is consist of propagation delay, transmission time, and queuing delay. While using Ping to send a 64-byte packet from one host to another host in adjacent,
+the propagation delay and transmission time will be very small. Therefore, queuing delay will dominate the latency. While we only have two pairs or three pairs of hosts communicating,
+the queuing delay is similar to the queuing delay when there is only one pair, so the latency is still close to 80 ms.
+
+My prediction for the throughput part is off. For two pairs of hosts, while the throughput for h7-h9 is over 10 Mbps, the throughput for h1-h4 is less than 10 Mbps.
+The deviation could result from the way we conducted the experiment. While we open h1 and h7 as server hosts, listening to h4 and h9 relatively,
+we let one client host h9 to start sending first because we cannot make the experiment completely simultaneously. Because of that,
+h9 started with almost no queue at the switches. But when h4 started, the packets from h4 immediately encounter queuing delay.
+Therefore, the overall throughput we measured for h7-h9 is a bit over 10 Mbps (half of the throughput in the link), and the overall throughput
+we measured for h1-h4 is a bit less than 10 Mbps. For three pairs of hosts, the deviation might be caused from the same reason above. While we open h1, h7 and h8 as server hosts,
+listening to h4, h9 and h10 relatively, we let h10 start to send packets first, then h9, and h4 at last, because we cannot make the experiment completely simultaneously.
+Under this circumstance, h8-h10 would suffer the least queuing delay while h1-h4 would suffer the most queuing delay, which leads to our measured results.
 
 Q4:
-For h1-h4: I expect the latency will be similar to what we have in Q2 and the throughput will be smaller.
-For h5-h6: I expect the latency to be similar to what we have in Q1 and the throughput will be smaller.
-  
+For h1-h4: I expect the latency will be similar to what we have in Q2 (80ms) and the throughput will be smaller than the bottleneck of its path.
+For h5-h6: I expect the latency to be similar to what we have in Q1 (20ms) and the throughput will be smaller than the bottleneck of its path.
+
+Expected for h1 - h4:           Expected for h5 - h6:
+  Latency: 80 ms                    Latency: 20 ms
+  Throughput: 18 Mbps               Throughput: 22 Mbps
+
+Measured for h1 - h4:                       Measured for h5 - h6:
+  Latency: 80.47 ms (avg RTT 160.935ms)         Latency: 20.76 ms (avg RTT 41.533ms)
+  Throughput: 15.7451 Mbps                      Throughput: 24.1796 Mbps
+
+My prediction for the latency part is mostly correct. Latency is still close to the sum of latencies along the path.
+Latency is consist of propagation delay, transmission time, and queuing delay. While using Ping to send a 64-byte packet from one host to another host in adjacent,
+the propagation delay and transmission time will be very small. Therefore, queuing delay will dominate the latency. While we only have two pairs of hosts communicating,
+the queuing delay is similar to the queuing delay when there is only one pair, so the latency between h1-h4 is still close to 80 ms, and the latency between h5-h6 is still 20 ms.
+
+Along the path from h1 to h4, Link L1 is its bottleneck with a throughput of 20.39 Mbps as we measure in previous questions.
+Along the path from h5 to h6, Link L4 is its bottleneck with a throughput of 25.317 Mbps as we measure in previous questions.
+Without other hosts, the throughput of h1-h4 would be close to 20.39 Mbps and the throughput of h5-h6 would be close to 25.317 Mbps.
+However, the path of h1-h4 and the path of h5-h6 will share link L2, and L2 has a maximum bandwidth of 40 Mbps, so we expect both of their throughput will be a bit smaller than their bottleneck.
+And we expect the sum of their throughput would be close to the maximum bandwidth of L2, 40 Mbps.
+
+My prediction for the throughput part is close but not exactly correct. Both of the throughput we measured were smaller than their bottleneck throughput, and their sum is close to maximum bandwidth of L2.
+However, the throughput of h5-h6 only decreased by ~5%, while the throughput of h1-h4 decreased by ~23% from their bottleneck throughput.
+The reason why the throughput of h5-h6 was penalized less might originate from the way we conducted the experiment. While we open h1 and h5 as server hosts, listening to h4 and h6 relatively,
+we let one client host h6 to start sending first because we cannot make the experiment completely simultaneously. Because of that, h6 started with almost no queue at the switches.
+But when h4 started, the packets from h4 immediately encountered queuing delay. Therefore, the overall throughput we measured for h5-h6 is more close to its bottleneck throughput.
+and the overall throughput we measured for h1-h4 is less close to its bottleneck throughput. And the sum of their throughput is close to 40 Mbps, L2's maximum bandwidth.
