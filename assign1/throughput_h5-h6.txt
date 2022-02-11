@@ -1,4 +1,2 @@
-Run server here
 received=65096.0 KB rate=22.699328742045157 Mbps
-Run client here
 sent=65096.0 KB rate=25.65991623552599 Mbps
