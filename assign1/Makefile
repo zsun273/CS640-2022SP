@@ -6,8 +6,7 @@ JC = javac
 .java.class:
 	$(JC) $(JFLAGS) $*.java
 
-CLASSES = \
-		  Iperfer.java \
+CLASSES = Iperfer.java
 
 default: classes
 
