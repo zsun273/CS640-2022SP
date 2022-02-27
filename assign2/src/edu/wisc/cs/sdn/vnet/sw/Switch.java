@@ -25,7 +25,7 @@ public class Switch extends Device
     static class SwitchEntry {
         private MACAddress destination;
         private Iface inIface;			// the interface on which the packet was received
-        long TTL;						// create time
+        private long TTL;						// create time
 
         public SwitchEntry(MACAddress destination, Iface inIface) {
             this.destination = destination;
@@ -96,6 +96,7 @@ public class Switch extends Device
         }
         else{
             for (Map.Entry<String, Iface> entry : this.interfaces.entrySet()){
+                if (entry.getValue().equals(inIface)) continue;
                 System.out.println("Sending: " + destinationMAC + " Interface: " + entry.getValue());
                 if(this.sendPacket(etherPacket, entry.getValue())){
                     System.out.println("Send successful\n");
