@@ -62,7 +62,6 @@ public class Switch extends Device
                 etherPacket.toString().replace("\n", "\n\t"));
 
         /********************************************************************/
-        /* TODO: Handle packets                                             */
         MACAddress sourceMAC;
         MACAddress destinationMAC;
         sourceMAC = etherPacket.getSourceMAC();
@@ -81,13 +80,16 @@ public class Switch extends Device
         }
         timedOutMAC.clear();
 
-        System.out.println("\n Current entries in switch map:\n");
+        System.out.println("\n----Current entries in switch map-------\n");
         for (Map.Entry<MACAddress, SwitchEntry> entry: SwitchMap.entrySet()){
-            System.out.println(entry.getKey() + ": " + entry.getValue().getInIface() + "," + entry.getValue().getTTL());
+            System.out.println("MAC: " + entry.getKey() + "Interface: " + entry.getValue().getInIface()
+                    + "Exist Time: " + (System.currentTimeMillis() - entry.getValue().getTTL()));
         }
+        System.out.println("-------------------------------------------");
 
         if (SwitchMap.containsKey(destinationMAC)) {
-            System.out.println("\nDestination in the Map\n");
+            System.out.println("\nDestination in the Map");
+            System.out.println("Sending: " + destinationMAC + "Interface: " + SwitchMap.get(destinationMAC).getInIface());
             if (this.sendPacket(etherPacket, SwitchMap.get(destinationMAC).getInIface()) == false){
                 System.out.println("Send failed\n");
             }
@@ -96,7 +98,7 @@ public class Switch extends Device
         else{
             Map<String,Iface> interfaces = this.interfaces;
             for (Map.Entry<String, Iface> entry : interfaces.entrySet()){
-                System.out.println("Sending: " + destinationMAC + ": " + entry.getValue());
+                System.out.println("Sending: " + destinationMAC + "Interface: " + entry.getValue());
                 if(this.sendPacket(etherPacket, entry.getValue())){
                     System.out.println("Send successful\n");
                 }
