@@ -25,7 +25,7 @@ public class Switch extends Device
     static class SwitchEntry {
         private MACAddress destination;
         private Iface inIface;			// the interface on which the packet was received
-        long TTL;						// time to live
+        long TTL;						// create time
 
         public SwitchEntry(MACAddress destination, Iface inIface) {
             this.destination = destination;
@@ -62,10 +62,8 @@ public class Switch extends Device
                 etherPacket.toString().replace("\n", "\n\t"));
 
         /********************************************************************/
-        MACAddress sourceMAC;
-        MACAddress destinationMAC;
-        sourceMAC = etherPacket.getSourceMAC();
-        destinationMAC = etherPacket.getDestinationMAC();
+        MACAddress sourceMAC = etherPacket.getSourceMAC();
+        MACAddress destinationMAC = etherPacket.getDestinationMAC();
         List<MACAddress> timedOutMAC = new ArrayList<MACAddress>();
 
         SwitchMap.put(sourceMAC, new SwitchEntry(sourceMAC, inIface));
@@ -81,24 +79,24 @@ public class Switch extends Device
         timedOutMAC.clear();
 
         System.out.println("\n----Current entries in switch map-------\n");
+        // print out all the entries in the switch map
         for (Map.Entry<MACAddress, SwitchEntry> entry: SwitchMap.entrySet()){
-            System.out.println("MAC: " + entry.getKey() + "Interface: " + entry.getValue().getInIface()
-                    + "Exist Time: " + (System.currentTimeMillis() - entry.getValue().getTTL()));
+            System.out.println("MAC: " + entry.getKey() + " Interface: " + entry.getValue().getInIface()
+                    + " Exist Time: " + (System.currentTimeMillis() - entry.getValue().getTTL()));
         }
         System.out.println("-------------------------------------------");
 
         if (SwitchMap.containsKey(destinationMAC)) {
-            System.out.println("\nDestination in the Map");
-            System.out.println("Sending: " + destinationMAC + "Interface: " + SwitchMap.get(destinationMAC).getInIface());
+            System.out.println("\nDestination is in the Map");
+            System.out.println("Sending: " + destinationMAC + " Interface: " + SwitchMap.get(destinationMAC).getInIface());
             if (this.sendPacket(etherPacket, SwitchMap.get(destinationMAC).getInIface()) == false){
                 System.out.println("Send failed\n");
             }
             return;
         }
         else{
-            Map<String,Iface> interfaces = this.interfaces;
-            for (Map.Entry<String, Iface> entry : interfaces.entrySet()){
-                System.out.println("Sending: " + destinationMAC + "Interface: " + entry.getValue());
+            for (Map.Entry<String, Iface> entry : this.interfaces.entrySet()){
+                System.out.println("Sending: " + destinationMAC + " Interface: " + entry.getValue());
                 if(this.sendPacket(etherPacket, entry.getValue())){
                     System.out.println("Send successful\n");
                 }
