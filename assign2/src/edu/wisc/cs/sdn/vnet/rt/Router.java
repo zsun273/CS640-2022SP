@@ -5,18 +5,20 @@ import edu.wisc.cs.sdn.vnet.DumpFile;
 import edu.wisc.cs.sdn.vnet.Iface;
 
 import net.floodlightcontroller.packet.Ethernet;
+import net.floodlightcontroller.packet.IPv4;
+import java.util.Map;
 
 /**
  * @author Aaron Gember-Jacobson and Anubhavnidhi Abhashkumar
  */
 public class Router extends Device
-{	
+{
 	/** Routing table for the router */
 	private RouteTable routeTable;
-	
+
 	/** ARP cache for the router */
 	private ArpCache arpCache;
-	
+
 	/**
 	 * Creates a router for a specific host.
 	 * @param host hostname for the router
@@ -27,13 +29,13 @@ public class Router extends Device
 		this.routeTable = new RouteTable();
 		this.arpCache = new ArpCache();
 	}
-	
+
 	/**
 	 * @return routing table for the router
 	 */
 	public RouteTable getRouteTable()
 	{ return this.routeTable; }
-	
+
 	/**
 	 * Load a new routing table from a file.
 	 * @param routeTableFile the name of the file containing the routing table
@@ -46,13 +48,13 @@ public class Router extends Device
 					+ routeTableFile);
 			System.exit(1);
 		}
-		
+
 		System.out.println("Loaded static route table");
 		System.out.println("-------------------------------------------------");
 		System.out.print(this.routeTable.toString());
 		System.out.println("-------------------------------------------------");
 	}
-	
+
 	/**
 	 * Load a new ARP cache from a file.
 	 * @param arpCacheFile the name of the file containing the ARP cache
@@ -65,7 +67,7 @@ public class Router extends Device
 					+ arpCacheFile);
 			System.exit(1);
 		}
-		
+
 		System.out.println("Loaded static ARP cache");
 		System.out.println("----------------------------------");
 		System.out.print(this.arpCache.toString());
@@ -81,11 +83,42 @@ public class Router extends Device
 	{
 		System.out.println("*** -> Received packet: " +
 				etherPacket.toString().replace("\n", "\n\t"));
-		
+
 		/********************************************************************/
 		/* TODO: Handle packets                                             */
-		
-		
+
+		// first, check is the packet contains IPv4 packet
+		if (etherPacket.getEtherType() != Ethernet.TYPE_IPv4) {
+			return;
+		}
+
+		// verify the checksum of the IPv4 packet
+		IPv4 ipPacket = (IPv4) etherPacket.getPayload();
+		//int headerLength = ipPacket.getHeaderLength().intValue() * 4;
+		short currChecksum = ipPacket.getChecksum();
+		ipPacket.resetChecksum();
+		byte[] serializedData = ipPacket.serialize();
+		ipPacket.deserialize(serializedData, 0, serializedData.length);
+		if (currChecksum != ipPacket.getChecksum()) {
+			return;
+		}
+
+		// decrement and verify the TTL of the packet
+		ipPacket.setTtl((byte)(ipPacket.getTtl() - 1));
+		if (ipPacket.getTtl() <= 0){
+			return;
+		}
+		ipPacket.resetChecksum();
+
+		Map<String,Iface> interfaces = this.interfaces;
+		for (Map.Entry<String, Iface> entry : this.interfaces.entrySet()){
+			if (ipPacket.getDestinationAddress() == entry.getValue().getIpAddress()) {
+				return;
+			}
+		}
+
+		// forward the packet
+
 		/********************************************************************/
 	}
 }
