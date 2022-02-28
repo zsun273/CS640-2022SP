@@ -98,7 +98,7 @@ public class Router extends Device
         IPv4 ipPacket = (IPv4) etherPacket.getPayload();
         //int headerLength = ipPacket.getHeaderLength().intValue() * 4;
         short currChecksum = ipPacket.getChecksum();
-        ipPacket.setChecksum((short)0);									// zeroed checksum before calculating
+        ipPacket.resetChecksum();									// zeroed checksum before calculating
         byte[] serializedData = ipPacket.serialize();
         ipPacket.deserialize(serializedData, 0, serializedData.length);
         if (currChecksum != ipPacket.getChecksum()) {
@@ -114,6 +114,10 @@ public class Router extends Device
         }
         ipPacket.resetChecksum();
 
+        if (inIface.getIpAddress() == ipPacket.getDestinationAddress()){
+            return;
+        }
+
         Map<String,Iface> interfaces = this.interfaces;
         for (Map.Entry<String, Iface> entry : this.interfaces.entrySet()){
             if (ipPacket.getDestinationAddress() == entry.getValue().getIpAddress()) {
@@ -128,8 +132,14 @@ public class Router extends Device
             System.out.println("Dropped because no match in route table\n");
             return;
         }
+
+        Iface outIface = longestMatch.getInterface();
+        if (outIface == inIface) {
+            return;
+        }
+
         int nextHop = longestMatch.getGatewayAddress();
-        if (nextHop == 0){  // TODO: whether we need to change 0 to destination ip
+        if (nextHop == 0){
             nextHop = ipPacket.getDestinationAddress();
         }
         ArpEntry arpEntry = this.arpCache.lookup(nextHop);
@@ -138,8 +148,6 @@ public class Router extends Device
             return;
         }
         etherPacket.setDestinationMACAddress(arpEntry.getMac().toBytes());
-
-        Iface outIface = longestMatch.getInterface();
         etherPacket.setSourceMACAddress(outIface.getMacAddress().toBytes());
 
         this.sendPacket(etherPacket, outIface);
