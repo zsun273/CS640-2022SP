@@ -123,9 +123,9 @@ public class Router extends Device
             return;
         }
         int nextHop = longestMatch.getGatewayAddress();
-        if (nextHop == 0){  // TODO: whether we need to change 0 to destination ip
-            nextHop = ipPacket.getDestinationAddress();
-        }
+//        if (nextHop == 0){  // TODO: whether we need to change 0 to destination ip
+//            nextHop = ipPacket.getDestinationAddress();
+//        }
         ArpEntry arpEntry = this.arpCache.lookup(nextHop);
         if (arpEntry == null){
             return;
