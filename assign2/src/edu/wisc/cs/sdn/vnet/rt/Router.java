@@ -6,6 +6,7 @@ import edu.wisc.cs.sdn.vnet.Iface;
 
 import net.floodlightcontroller.packet.Ethernet;
 import net.floodlightcontroller.packet.IPv4;
+import net.floodlightcontroller.packet.MACAddress;
 import java.util.Map;
 
 /**
@@ -89,6 +90,7 @@ public class Router extends Device
 
         // first, check is the packet contains IPv4 packet
         if (etherPacket.getEtherType() != Ethernet.TYPE_IPv4) {
+            System.out.println("Dropped because IPv4 type failed\n");
             return;
         }
 
@@ -96,16 +98,18 @@ public class Router extends Device
         IPv4 ipPacket = (IPv4) etherPacket.getPayload();
         //int headerLength = ipPacket.getHeaderLength().intValue() * 4;
         short currChecksum = ipPacket.getChecksum();
-        ipPacket.resetChecksum();
+        ipPacket.setChecksum((short)0);									// zeroed checksum before calculating
         byte[] serializedData = ipPacket.serialize();
         ipPacket.deserialize(serializedData, 0, serializedData.length);
         if (currChecksum != ipPacket.getChecksum()) {
+            System.out.println("Dropped because checksum failed\n");
             return;
         }
 
         // decrement and verify the TTL of the packet
         ipPacket.setTtl((byte)(ipPacket.getTtl() - 1));
         if (ipPacket.getTtl() <= 0){
+            System.out.println("Dropped because TTL failed\n");
             return;
         }
         ipPacket.resetChecksum();
@@ -113,6 +117,7 @@ public class Router extends Device
         Map<String,Iface> interfaces = this.interfaces;
         for (Map.Entry<String, Iface> entry : this.interfaces.entrySet()){
             if (ipPacket.getDestinationAddress() == entry.getValue().getIpAddress()) {
+                System.out.println("Dropped because destination is in one of router's interface\n");
                 return;
             }
         }
@@ -120,14 +125,16 @@ public class Router extends Device
         // forward the packet
         RouteEntry longestMatch = this.routeTable.lookup(ipPacket.getDestinationAddress());
         if (longestMatch == null){
+            System.out.println("Dropped because no match in route table\n");
             return;
         }
         int nextHop = longestMatch.getGatewayAddress();
-//        if (nextHop == 0){  // TODO: whether we need to change 0 to destination ip
-//            nextHop = ipPacket.getDestinationAddress();
-//        }
+        if (nextHop == 0){  // TODO: whether we need to change 0 to destination ip
+            nextHop = ipPacket.getDestinationAddress();
+        }
         ArpEntry arpEntry = this.arpCache.lookup(nextHop);
         if (arpEntry == null){
+            System.out.println("Dropped because ARP cache cannot found this next hop\n");
             return;
         }
         etherPacket.setDestinationMACAddress(arpEntry.getMac().toBytes());
