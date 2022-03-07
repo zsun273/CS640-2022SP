@@ -77,19 +77,8 @@ public class Switch extends Device
         /********************************************************************/
         MACAddress sourceMAC = etherPacket.getSourceMAC();
         MACAddress destinationMAC = etherPacket.getDestinationMAC();
-//        List<MACAddress> timedOutMAC = new ArrayList<MACAddress>();
-//
-//        SwitchMap.put(sourceMAC, new SwitchEntry(sourceMAC, inIface));
-//        // find timed out entries and delete them from the switch map
-//        for (Map.Entry<MACAddress, SwitchEntry> entry: SwitchMap.entrySet()){
-//            if (System.currentTimeMillis() - entry.getValue().getTTL() >= 15000) {
-//                timedOutMAC.add(entry.getKey());
-//            }
-//        }
-//        for (int i = 0; i < timedOutMAC.size(); i++){
-//            SwitchMap.remove(timedOutMAC.get(i));
-//        }
-//        timedOutMAC.clear();
+
+        SwitchMap.put(sourceMAC, new SwitchEntry(sourceMAC, inIface));
 
         System.out.println("\n----Current entries in switch map-------\n");
         // print out all the entries in the switch map
