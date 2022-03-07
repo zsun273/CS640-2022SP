@@ -52,14 +52,20 @@ public class Switch extends Device
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
+                List<MACAddress> timedOutMAC = new ArrayList<MACAddress>();
                 for (MACAddress key : SwitchMap.keySet()) {
                     SwitchEntry se = SwitchMap.get(key);
                     se.TTL -= 1;
-                    if (se.TTL < 0)
-                        SwitchMap.remove(key);
+                    if (se.TTL <= 0) {
+                        timedOutMAC.add(key);
+                    }
                     else
                         SwitchMap.replace(key, se);
                 }
+                for (int i = 0; i < timedOutMAC.size(); i++){
+                    SwitchMap.remove(timedOutMAC.get(i));
+                }
+                timedOutMAC.clear();
             }
         }, 0, 1000);
     }
@@ -77,8 +83,14 @@ public class Switch extends Device
         /********************************************************************/
         MACAddress sourceMAC = etherPacket.getSourceMAC();
         MACAddress destinationMAC = etherPacket.getDestinationMAC();
+//        List<MACAddress> timedOutMAC = new ArrayList<MACAddress>();
 
         SwitchMap.put(sourceMAC, new SwitchEntry(sourceMAC, inIface));
+//        // find timed out entries and delete them from the switch map
+//        for (int i = 0; i < timedOutMAC.size(); i++){
+//            SwitchMap.remove(timedOutMAC.get(i));
+//        }
+//        timedOutMAC.clear();
 
         System.out.println("\n----Current entries in switch map-------\n");
         // print out all the entries in the switch map
