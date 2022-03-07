@@ -6,18 +6,16 @@ import edu.wisc.cs.sdn.vnet.Device;
 import edu.wisc.cs.sdn.vnet.DumpFile;
 import edu.wisc.cs.sdn.vnet.Iface;
 
-import java.util.Map;
-import java.util.HashMap;
+import java.util.*;
 import java.lang.System;
-import java.util.List;
-import java.util.ArrayList;
 
 /**
  * @author Aaron Gember-Jacobson
  */
 public class Switch extends Device
 {
-    Map<MACAddress, SwitchEntry> SwitchMap = new HashMap<MACAddress, SwitchEntry>();
+    Map<MACAddress, SwitchEntry> SwitchMap;
+    Timer timer;
 
     /**
      * @author Zhuocheng Sun
@@ -25,19 +23,19 @@ public class Switch extends Device
     static class SwitchEntry {
         private MACAddress destination;
         private Iface inIface;			// the interface on which the packet was received
-        private long TTL;						// create time
+        private int TTL;						// create time
 
         public SwitchEntry(MACAddress destination, Iface inIface) {
             this.destination = destination;
             this.inIface = inIface;
-            this.TTL = System.currentTimeMillis();
+            this.TTL = 15;
         }
 
         public Iface getInIface() {
             return inIface;
         }
 
-        public long getTTL() {
+        public int getTTL() {
             return TTL;
         }
     }
@@ -49,6 +47,21 @@ public class Switch extends Device
     public Switch(String host, DumpFile logfile)
     {
         super(host,logfile);
+        this.SwitchMap = new HashMap<MACAddress, SwitchEntry>();
+        this.timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                for (MACAddress key : SwitchMap.keySet()) {
+                    SwitchEntry se = SwitchMap.get(key);
+                    se.TTL -= 1;
+                    if (se.TTL < 0)
+                        SwitchMap.remove(key);
+                    else
+                        SwitchMap.replace(key, se);
+                }
+            }
+        }, 0, 1000);
     }
 
     /**
@@ -64,25 +77,25 @@ public class Switch extends Device
         /********************************************************************/
         MACAddress sourceMAC = etherPacket.getSourceMAC();
         MACAddress destinationMAC = etherPacket.getDestinationMAC();
-        List<MACAddress> timedOutMAC = new ArrayList<MACAddress>();
-
-        SwitchMap.put(sourceMAC, new SwitchEntry(sourceMAC, inIface));
-        // find timed out entries and delete them from the switch map
-        for (Map.Entry<MACAddress, SwitchEntry> entry: SwitchMap.entrySet()){
-            if (System.currentTimeMillis() - entry.getValue().getTTL() >= 15000) {
-                timedOutMAC.add(entry.getKey());
-            }
-        }
-        for (int i = 0; i < timedOutMAC.size(); i++){
-            SwitchMap.remove(timedOutMAC.get(i));
-        }
-        timedOutMAC.clear();
+//        List<MACAddress> timedOutMAC = new ArrayList<MACAddress>();
+//
+//        SwitchMap.put(sourceMAC, new SwitchEntry(sourceMAC, inIface));
+//        // find timed out entries and delete them from the switch map
+//        for (Map.Entry<MACAddress, SwitchEntry> entry: SwitchMap.entrySet()){
+//            if (System.currentTimeMillis() - entry.getValue().getTTL() >= 15000) {
+//                timedOutMAC.add(entry.getKey());
+//            }
+//        }
+//        for (int i = 0; i < timedOutMAC.size(); i++){
+//            SwitchMap.remove(timedOutMAC.get(i));
+//        }
+//        timedOutMAC.clear();
 
         System.out.println("\n----Current entries in switch map-------\n");
         // print out all the entries in the switch map
         for (Map.Entry<MACAddress, SwitchEntry> entry: SwitchMap.entrySet()){
             System.out.println("MAC: " + entry.getKey() + " Interface: " + entry.getValue().getInIface()
-                    + " Exist Time: " + (System.currentTimeMillis() - entry.getValue().getTTL()));
+                    + " Exist Time: " + entry.getValue().getTTL());
         }
         System.out.println("-------------------------------------------");
 
