@@ -178,7 +178,11 @@ public class Router extends Device
 		// Set destination MAC address in Ethernet header
 		ArpEntry arpEntry = this.arpCache.lookup(nextHop);
 		if (null == arpEntry)
-		{ return; }
+		{
+			// destination host unreachable icmp
+			sendICMPmsg((byte)3, (byte)1, etherPacket, inIface, ipPacket);
+			return;
+		}
 		etherPacket.setDestinationMACAddress(arpEntry.getMac().toBytes());
 
 		this.sendPacket(etherPacket, outIface);
