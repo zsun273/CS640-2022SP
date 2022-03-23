@@ -165,7 +165,23 @@ public class Router extends Device
 		// Make sure we don't sent a packet back out the interface it came in
 		Iface outIface = bestMatch.getInterface();
 		if (outIface == inIface)
-		{ return; }
+		{
+			// destination port unreachable icmp
+			if (ipPacket.getProtocol() == IPv4.PROTOCOL_UDP || ipPacket.getProtocol() == IPv4.PROTOCOL_TCP){
+				sendICMPmsg((byte)3, (byte)3, etherPacket, inIface, ipPacket);
+				return;
+			}
+			if (ipPacket.getProtocol() == IPv4.PROTOCOL_ICMP){
+				ICMP icmpPacket = (ICMP)ipPacket.getPayload();
+				if (icmpPacket.getIcmpType() == (byte)8){
+					// construct and send an echo reply message
+					System.out.println("Send an echo reply message here");
+				} else{
+					return;
+				}
+			}
+			return;
+		}
 
 		// Set source MAC address in Ethernet header
 		etherPacket.setSourceMACAddress(outIface.getMacAddress().toBytes());
