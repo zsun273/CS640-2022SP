@@ -254,7 +254,10 @@ public class Router extends Device
 			ICMP icmpHeaderPayload = (ICMP)ipPacket.getPayload();
 			icmpHeaderPayload.setChecksum((short)0);
 			byte[] icmpBytes = icmpHeaderPayload.serialize();
-			byte[] icmpPayload = icmpBytes[4:]; 				// Header: byte, byte, short, so 4 bytes in header
+			byte[] icmpPayload = new byte[icmpBytes.length - 4];
+			for (int i = 4; i < icmpBytes.length; i++){
+				icmpPayload[i-4] = icmpBytes[i];
+			}
 			data.setData(icmpPayload);
 		}
 		else{
