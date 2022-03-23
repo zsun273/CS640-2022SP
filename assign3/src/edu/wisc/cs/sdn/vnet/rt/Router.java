@@ -251,10 +251,11 @@ public class Router extends Device
 		if (type == (byte)0){
 			// echo reply icmp
 			ip.setSourceAddress(ipPacket.getDestinationAddress());
-			icmp = (ICMP)ipPacket.getPayload();
-			// reset icmp header
-			icmp.setIcmpType(type);
-			icmp.setIcmpCode(code);
+			ICMP icmpHeaderPayload = (ICMP)ipPacket.getPayload();
+			icmpHeaderPayload.setChecksum((short)0);
+			byte[] icmpBytes = icmpHeaderPayload.serialize();
+			byte[] icmpPayload = icmpBytes[4:]; 				// Header: byte, byte, short, so 4 bytes in header
+			data.setData(icmpPayload);
 		}
 		else{
 			// set up ICMP payload
