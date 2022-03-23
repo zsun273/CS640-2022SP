@@ -144,6 +144,9 @@ public class Router extends Device
 					if (icmpPacket.getIcmpType() == (byte)8){
 						// construct and send an echo reply message
 						System.out.println("Send an echo reply message here");
+						// check if the destination ip of the echo request match any ip of router's interfaces
+						// no need to check, already in the outer if statement
+						sendICMPmsg((byte)0, (byte)0, etherPacket, inIface, ipPacket);
 					} else{
 						return;
 					}
@@ -244,18 +247,29 @@ public class Router extends Device
 		// set up ICMP header
 		icmp.setIcmpType(type);
 		icmp.setIcmpCode(code);
-		// set up ICMP payload
-		ipPacket.resetChecksum();
-		byte[] ipBytes = ipPacket.serialize();
-		int nIpBytes = ipPacket.getHeaderLength()*4 + 8; // original header + 8 B of payload
-		byte[] icmpPayload = new byte[nIpBytes + 4];
-		for (int j = 0; j < 4; j++){
-			icmpPayload[j] = (byte) 0;				// fill in padding with 0.
+
+		if (type == (byte)0){
+			// echo reply icmp
+			ip.setSourceAddress(ipPacket.getDestinationAddress());
+			icmp = (ICMP)ipPacket.getPayload();
+			// reset icmp header
+			icmp.setIcmpType(type);
+			icmp.setIcmpCode(code);
 		}
-		for (int i = 0; i < nIpBytes; i++) {
-			icmpPayload[i+4] = ipBytes[i]; 			// move everything back 4 bytes
+		else{
+			// set up ICMP payload
+			ipPacket.resetChecksum();
+			byte[] ipBytes = ipPacket.serialize();
+			int nIpBytes = ipPacket.getHeaderLength()*4 + 8; // original header + 8 B of payload
+			byte[] icmpPayload = new byte[nIpBytes + 4];
+			for (int j = 0; j < 4; j++){
+				icmpPayload[j] = (byte) 0;				// fill in padding with 0.
+			}
+			for (int i = 0; i < nIpBytes; i++) {
+				icmpPayload[i+4] = ipBytes[i]; 			// move everything back 4 bytes
+			}
+			data.setData(icmpPayload);
 		}
-		data.setData(icmpPayload);
 
 		sendPacket(ether, inIface);
 		System.out.println("ICMP packet sent");
