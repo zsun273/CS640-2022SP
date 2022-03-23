@@ -6,6 +6,7 @@ import edu.wisc.cs.sdn.vnet.Iface;
 
 import net.floodlightcontroller.packet.Ethernet;
 import net.floodlightcontroller.packet.IPv4;
+import net.floodlightcontroller.packet.*;
 
 /**
  * @author Aaron Gember-Jacobson and Anubhavnidhi Abhashkumar
@@ -119,7 +120,11 @@ public class Router extends Device
 		// Check TTL
 		ipPacket.setTtl((byte)(ipPacket.getTtl()-1));
 		if (0 == ipPacket.getTtl())
-		{ return; }
+		{
+			// TODO: generate an ICMP time exceed message here
+			sendICMPmsg((byte)11, (byte)0, etherPacket, inIface, ipPacket);
+			return;
+		}
 
 		// Reset checksum now that TTL is decremented
 		ipPacket.resetChecksum();
@@ -173,5 +178,60 @@ public class Router extends Device
 		etherPacket.setDestinationMACAddress(arpEntry.getMac().toBytes());
 
 		this.sendPacket(etherPacket, outIface);
+	}
+
+	private void sendICMPmsg(byte type, byte code, Ethernet etherPacket, Iface inIface, IPv4 ipPacket)
+	{
+		Ethernet ether = new Ethernet();
+		IPv4 ip = new IPv4();
+		ICMP icmp = new ICMP();
+		Data data = new Data();
+		ether.setPayload(ip);
+		ip.setPayload(icmp);
+		icmp.setPayload(data);
+
+		// set up ethernet header
+		ether.setEtherType(Ethernet.TYPE_IPv4);
+		ether.setSourceMACAddress(inIface.getMacAddress().toBytes());
+		int sourceAddress = ipPacket.getSourceAddress();
+		RouteEntry bestMatch = this.routeTable.lookup(sourceAddress);
+
+		// If no gateway, then nextHop is IP destination
+		int nextHop = bestMatch.getGatewayAddress();
+		if (0 == nextHop)
+		{ nextHop = sourceAddress; }
+
+		// Set destination MAC address in Ethernet header
+		ArpEntry arpEntry = this.arpCache.lookup(nextHop);
+		if (null == arpEntry){
+			ether.setDestinationMACAddress(etherPacket.getSourceMAC().toBytes());
+		} else{
+			ether.setDestinationMACAddress(arpEntry.getMac().toBytes());
+		}
+
+		// set up ip header
+		ip.setTtl((byte)64);
+		ip.setProtocol(IPv4.PROTOCOL_ICMP);
+		ip.setSourceAddress(inIface.getIpAddress());
+		ip.setDestinationAddress(ipPacket.getSourceAddress());
+
+		// set up ICMP header
+		icmp.setIcmpType(type);
+		icmp.setIcmpCode(code);
+		// set up ICMP payload
+		ipPacket.resetChecksum();
+		byte[] ipBytes = ipPacket.serialize();
+		int nIpBytes = ipPacket.getHeaderLength()*4 + 8; // original header + 8 B of payload
+		byte[] icmpPayload = new byte[nIpBytes + 4];
+		for (int j = 0; j < 4; j++){
+			icmpPayload[j] = (byte) 0;				// fill in padding with 0.
+		}
+		for (int i = 0; i < nIpBytes; i++) {
+			icmpPayload[i+4] = ipBytes[i]; 			// move everything back 4 bytes
+		}
+		data.setData(icmpPayload);
+
+		sendPacket(ether, inIface);
+		System.out.println("ICMP packet sent");
 	}
 }
