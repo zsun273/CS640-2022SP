@@ -121,7 +121,7 @@ public class Router extends Device
 		ipPacket.setTtl((byte)(ipPacket.getTtl()-1));
 		if (0 == ipPacket.getTtl())
 		{
-			// TODO: generate an ICMP time exceed message here
+			// generate an ICMP time exceed message here
 			sendICMPmsg((byte)11, (byte)0, etherPacket, inIface, ipPacket);
 			return;
 		}
@@ -156,7 +156,11 @@ public class Router extends Device
 
 		// If no entry matched, do nothing
 		if (null == bestMatch)
-		{ return; }
+		{
+			// Destination network unreachable ICMP
+			sendICMPmsg((byte)3, (byte)0, etherPacket, inIface, ipPacket);
+			return;
+		}
 
 		// Make sure we don't sent a packet back out the interface it came in
 		Iface outIface = bestMatch.getInterface();
