@@ -165,6 +165,19 @@ public class RouteTable
 		}
 	}
 
+	public void insert(int dstIp, int gwIp, int maskIp, Iface iface, int cost) {
+		RouteEntry entry = new RouteEntry(dstIp, gwIp, maskIp, iface);
+		entry.setCost(cost);
+		entry.setParent(this);
+
+		synchronized (this.entries){
+			this.entries.add(entry);
+			if (gwIp != 0){
+				entry.start();
+			}
+		}
+	}
+
 	/**
 	 * Remove an entry from the route table.
 	 * @param dstIP destination IP of the entry to remove

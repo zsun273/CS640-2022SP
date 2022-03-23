@@ -3,6 +3,9 @@ package edu.wisc.cs.sdn.vnet.rt;
 import net.floodlightcontroller.packet.IPv4;
 import edu.wisc.cs.sdn.vnet.Iface;
 
+import java.util.TimerTask;
+import java.util.Timer;
+
 /**
  * An entry in a route table.
  * @author Aaron Gember-Jacobson and Anubhavnidhi Abhashkumar
@@ -21,7 +24,13 @@ public class RouteEntry
 	/** Router interface out which packets should be sent to reach
 	 * the destination or gateway */
 	private Iface iface;
-	
+
+	/** Cost between router to destination */
+	private int cost;
+
+	private Timer timer;
+	private RouteTable parent;
+
 	/**
 	 * Create a new route table entry.
 	 * @param destinationAddress destination IP address
@@ -69,7 +78,45 @@ public class RouteEntry
 
 	public void setInterface(Iface iface)
 	{ this.iface = iface; }
-	
+
+	public int getCost() {
+		return cost;
+	}
+
+	public void setCost(int cost) {
+		this.cost = cost;
+	}
+
+	public void setParent(RouteTable parent) {
+		this.parent = parent;
+	}
+
+	public RouteTable getParent() {
+		return parent;
+	}
+
+	public void start(){
+		this.timer = new Timer();
+		this.timer.schedule(new removeCheck(), 10000);
+	}
+
+	public void reset(){
+		this.timer.cancel();
+		this.timer.purge();
+		this.timer = new Timer();
+		this.timer.schedule(new removeCheck(), 30000);
+	}
+
+	public void timeToRemove(){
+		parent.remove(this.getDestinationAddress(), this.getMaskAddress());
+	}
+
+	class removeCheck extends TimerTask{
+		public void run(){
+			timeToRemove();
+		}
+	}
+
 	public String toString()
 	{
 		return String.format("%s \t%s \t%s \t%s",

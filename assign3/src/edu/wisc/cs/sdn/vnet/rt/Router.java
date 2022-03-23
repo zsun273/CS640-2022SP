@@ -8,6 +8,9 @@ import net.floodlightcontroller.packet.Ethernet;
 import net.floodlightcontroller.packet.IPv4;
 import net.floodlightcontroller.packet.*;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 /**
  * @author Aaron Gember-Jacobson and Anubhavnidhi Abhashkumar
  */
@@ -18,6 +21,9 @@ public class Router extends Device
 
 	/** ARP cache for the router */
 	private ArpCache arpCache;
+
+	/** Timer for RIP response */
+	private Timer timer;
 
 	/**
 	 * Creates a router for a specific host.
@@ -277,5 +283,40 @@ public class Router extends Device
 
 		sendPacket(ether, inIface);
 		System.out.println("ICMP packet sent");
+	}
+
+	public void initializeRouteTable() {
+		// add entries to route table for subnets that are directly reachable via router's interfaces
+		for (Iface iface : this.interfaces.values()){
+			int subnetMask = iface.getSubnetMask();
+			int destination = iface.getIpAddress() & subnetMask;
+			// int destinationAddr, int gatewayAddr, int maskAddr, Iface iface, int cost
+			this.routeTable.insert(destination, 0, subnetMask, iface, 1);
+		}
+		System.out.println(this.routeTable.toString());
+
+		// send initial RIP
+		for (Iface iface: this.interfaces.values()){
+			this.sendRIP(iface, true, true);
+		}
+
+		this.timer = new Timer();
+		this.timer.scheduleAtFixedRate(new updateRIP(), 1000, 1000);
+	}
+
+	public void sendRIP(Iface inIface, boolean broadcast, boolean request){
+
+	}
+
+	public void timeToResponse(){
+		for (Iface iface: this.interfaces.values()){
+			this.sendRIP(iface, true, true);
+		}
+	}
+
+	class updateRIP extends TimerTask{
+		public void run(){
+			timeToResponse();
+		}
 	}
 }
