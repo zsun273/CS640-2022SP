@@ -215,6 +215,23 @@ public class RouteTable
 		return true;
 	}
 
+	public boolean update(int dstIp, int maskIp, int gwIp, Iface iface, int cost){
+		synchronized (this.entries){
+			RouteEntry entry = this.find(dstIp, maskIp);
+			if (entry == null) {
+				return false;
+			}
+			if (gwIp != 0){
+				entry.restart();
+			}
+			entry.setGatewayAddress(gwIp);
+			entry.setInterface(iface);
+			entry.setCost(cost);
+		}
+		return true;
+	}
+
+
 	/**
 	 * Find an entry in the route table.
 	 * @param dstIP destination IP of the entry to find

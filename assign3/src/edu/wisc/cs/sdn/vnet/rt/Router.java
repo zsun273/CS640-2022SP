@@ -141,9 +141,19 @@ public class Router extends Device
 			if (ipPacket.getDestinationAddress() == iface.getIpAddress())
 			{
 				// destination port unreachable icmp
-				if (ipPacket.getProtocol() == IPv4.PROTOCOL_UDP || ipPacket.getProtocol() == IPv4.PROTOCOL_TCP){
+				if (ipPacket.getProtocol() == IPv4.PROTOCOL_TCP){
 					sendICMPmsg((byte)3, (byte)3, etherPacket, inIface, ipPacket);
 					return;
+				}
+				if (ipPacket.getProtocol() == IPv4.PROTOCOL_UDP){
+					UDP udpPacket = (UDP)ipPacket.getPayload();
+					if (udpPacket.getDestinationPort() == UDP.RIP_PORT){
+						// this packet is RIP requests or responses
+						handleRIPpacket(etherPacket, inIface);
+					} else{
+						sendICMPmsg((byte)3, (byte)3, etherPacket, inIface, ipPacket);
+						return;
+					}
 				}
 				if (ipPacket.getProtocol() == IPv4.PROTOCOL_ICMP){
 					ICMP icmpPacket = (ICMP)ipPacket.getPayload();
@@ -293,10 +303,12 @@ public class Router extends Device
 			// int destinationAddr, int gatewayAddr, int maskAddr, Iface iface, int cost
 			this.routeTable.insert(destination, 0, subnetMask, iface, 1);
 		}
+		System.out.println("Create static route table");
 		System.out.println(this.routeTable.toString());
 
-		// send initial RIP
+		// send initial RIP out all of router's interfaces
 		for (Iface iface: this.interfaces.values()){
+			// RIP Request
 			this.sendRIP(iface, true, true);
 		}
 
@@ -308,9 +320,69 @@ public class Router extends Device
 
 	}
 
+	public void handleRIPpacket(Ethernet etherPacket, Iface inIface){
+		// Make sure it's an IP packet
+		if (etherPacket.getEtherType() != Ethernet.TYPE_IPv4)
+		{ return; }
+
+		// Get IP header
+		IPv4 ipPacket = (IPv4)etherPacket.getPayload();
+		if (ipPacket.getProtocol() != IPv4.PROTOCOL_UDP)
+		{return; }
+
+		UDP udpPacket = (UDP)ipPacket.getPayload();
+		// Verify checksum
+		short origCksum = udpPacket.getChecksum();
+		udpPacket.resetChecksum();
+		byte[] serialized = udpPacket.serialize();
+		udpPacket.deserialize(serialized, 0, serialized.length);
+		short calcCksum = udpPacket.getChecksum();
+		if (origCksum != calcCksum)
+		{ return; }
+
+		// Verify RIP port 520
+		if (udpPacket.getDestinationPort() != UDP.RIP_PORT)
+		{return; }
+
+		RIPv2 rip = (RIPv2)udpPacket.getPayload();
+		if (rip.getCommand() == RIPv2.COMMAND_RESPONSE){
+			System.out.println("Get a RIP Response Command");
+			// send a solicited RIP response
+			for (RIPv2Entry riPv2Entry: rip.getEntries()) {
+				int cost = riPv2Entry.getMetric() + 1;
+				riPv2Entry.setMetric(cost);
+
+				RouteEntry found = this.routeTable.lookup(riPv2Entry.getAddress());
+				if (found == null || found.getCost() > cost){
+					if (found != null) {
+						System.out.println("Find a better metric from: " + found.getCost() + "to: " + cost);
+						this.routeTable.update(riPv2Entry.getAddress(), riPv2Entry.getNextHopAddress(),
+								riPv2Entry.getSubnetMask(), inIface, cost);
+					} else {
+						System.out.println("Insert a new entry into route table");
+						this.routeTable.insert(riPv2Entry.getAddress(), riPv2Entry.getNextHopAddress(),
+								riPv2Entry.getSubnetMask(), inIface, cost);
+					}
+
+					for (Iface iface: this.interfaces.values()){
+						// solicited RIP response
+						this.sendRIP(iface, false, false);
+					}
+				}
+			}
+		} else if(rip.getCommand() == RIPv2.COMMAND_REQUEST){
+			System.out.println("Get a RIP request Command");
+			// send a unsolicited RIP response
+			this.sendRIP(inIface, true, false);
+			return;
+		}
+
+	}
+
 	public void timeToResponse(){
 		for (Iface iface: this.interfaces.values()){
-			this.sendRIP(iface, true, true);
+			// unsolicited RIP response
+			this.sendRIP(iface, true, false);
 		}
 	}
 
