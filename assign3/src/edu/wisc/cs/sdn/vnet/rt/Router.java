@@ -132,6 +132,18 @@ public class Router extends Device
 			return;
 		}
 
+		// check if the ip packet contains rip
+		if (ipPacket.getDestinationAddress() == IPv4.toIPv4Address("224.0.0.9")) {
+			if (ipPacket.getProtocol() == IPv4.PROTOCOL_UDP) {
+				System.out.println("This one contains RIP!");
+				UDP udpPacket = (UDP) ipPacket.getPayload();
+				if (udpPacket.getDestinationPort() == UDP.RIP_PORT) {
+					// this packet is RIP requests or responses
+					System.out.println("Handle RIP packet.");
+					handleRIPpacket(etherPacket, inIface);
+				}
+			}
+		}
 		// Reset checksum now that TTL is decremented
 		ipPacket.resetChecksum();
 
@@ -149,6 +161,7 @@ public class Router extends Device
 					UDP udpPacket = (UDP)ipPacket.getPayload();
 					if (udpPacket.getDestinationPort() == UDP.RIP_PORT){
 						// this packet is RIP requests or responses
+						System.out.println("Handle RIP packet.");
 						handleRIPpacket(etherPacket, inIface);
 					} else{
 						sendICMPmsg((byte)3, (byte)3, etherPacket, inIface, ipPacket);
@@ -304,7 +317,9 @@ public class Router extends Device
 			this.routeTable.insert(destination, 0, subnetMask, iface, 1);
 		}
 		System.out.println("Create static route table");
+		System.out.println("--------------------------------------------");
 		System.out.println(this.routeTable.toString());
+		System.out.println("--------------------------------------------");
 
 		// send initial RIP out all of router's interfaces
 		for (Iface iface: this.interfaces.values()){
@@ -313,7 +328,7 @@ public class Router extends Device
 		}
 
 		this.timer = new Timer();
-		this.timer.scheduleAtFixedRate(new updateRIP(), 1000, 1000);
+		this.timer.scheduleAtFixedRate(new updateRIP(), 10000, 10000);
 	}
 
 	public void sendRIP(Iface iface, boolean broadcast, boolean request){
@@ -433,8 +448,13 @@ public class Router extends Device
 	public void timeToResponse(){
 		for (Iface iface: this.interfaces.values()){
 			// unsolicited RIP response
+			System.out.println("Send unsolicited RIP response");
 			this.sendRIP(iface, true, false);
 		}
+		System.out.println("Static route table after response");
+		System.out.println("--------------------------------------------");
+		System.out.println(this.routeTable.toString());
+		System.out.println("--------------------------------------------");
 	}
 
 	class updateRIP extends TimerTask{
