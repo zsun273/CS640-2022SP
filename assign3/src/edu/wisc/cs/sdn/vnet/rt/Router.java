@@ -316,7 +316,58 @@ public class Router extends Device
 		this.timer.scheduleAtFixedRate(new updateRIP(), 1000, 1000);
 	}
 
-	public void sendRIP(Iface inIface, boolean broadcast, boolean request){
+	public void sendRIP(Iface iface, boolean broadcast, boolean request){
+		Ethernet ether = new Ethernet();
+		IPv4 ipPacket = new IPv4();
+		UDP udpPacket = new UDP();
+		RIPv2 rip = new RIPv2();
+
+		// set ethernet header
+		ether.setEtherType(Ethernet.TYPE_IPV4);
+        ether.setSourceMACAddress("FF:FF:FF:FF:FF:FF");
+		if (broadcast == true){
+			ether.setDestinationMACAddress("FF:FF:FF:FF:FF:FF");
+		} else{
+			ether.setDestinationMACAddress(iface.getMAacAddress().toBytes());
+		}
+
+		// set ip
+		ip.setTtl((byte)64);
+		ip.setProtocol(IPv4.PROTOCOL_UDP);
+		if (broadcast == true){
+			ip.setDestinationAddress("224.0.0.9");
+		} else{
+			ip.setDestinationAddress(iface.getIpAddress());
+		}
+
+		// set udp
+		udpPacket.setSourcePort(UDP.RIP_PORT);
+		udpPacket.setDestinationPort(UDP.RIP_PORT);
+
+		// set rip command
+		if (request){
+			ripPacket.setCommand(RIPv2.COMMAND_REQUEST);
+		} else {
+			ripPacket.setCommand(RIPv2.COMMAND_RESPONSE);
+		}
+
+		for (RouteEntry entry: this.routeTable.getEntries()) {
+			int dstAddr = entry.getDestinationAddress();
+			int subnetMask = entry.getMaskAddress();
+			int nextHopAddr = iface.getIpAddress();
+			int cost = entry.getCost();
+
+			RIPv2Entry riPv2Entry = new RIPv2Entry(dstAddr, subnetMask, cost);
+			riPv2Entry.setNextHopAddress(nextHopAddr);
+			rip.addEntry(riPv2Entry);
+		}
+
+		udpPacket.setPayload(rip);
+		ipPacket.setPayload(udpPacket);
+		ether.setPayload(ipPacket);
+		ether.serialize();
+		sendPacket(ether, iface);
+		return;
 
 	}
 

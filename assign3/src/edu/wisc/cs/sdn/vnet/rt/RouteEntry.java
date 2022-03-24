@@ -97,7 +97,7 @@ public class RouteEntry
 
 	public void start(){
 		this.timer = new Timer();
-		this.timer.schedule(new removeCheck(), 10000);
+		this.timer.schedule(new removeCheck(), 30000);
 	}
 
 	public void reset(){

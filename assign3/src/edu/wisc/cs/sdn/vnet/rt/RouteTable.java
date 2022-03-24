@@ -172,7 +172,7 @@ public class RouteTable
 
 		synchronized (this.entries){
 			this.entries.add(entry);
-			if (gwIp != 0){
+			if (gwIp != 0){ // not directly reachble via router's interface
 				entry.start();
 			}
 		}
@@ -231,6 +231,9 @@ public class RouteTable
 		return true;
 	}
 
+	public List<RouteEntry> getEntries() {
+		return entries;
+	}
 
 	/**
 	 * Find an entry in the route table.
