@@ -252,20 +252,26 @@ public class Router extends Device
 		ether.setEtherType(Ethernet.TYPE_IPv4);
 		ether.setSourceMACAddress(inIface.getMacAddress().toBytes());
 		int sourceAddress = ipPacket.getSourceAddress();
+
+
 		RouteEntry bestMatch = this.routeTable.lookup(sourceAddress);
-
-		// If no gateway, then nextHop is IP destination
-		int nextHop = bestMatch.getGatewayAddress();
-		if (0 == nextHop)
-		{ nextHop = sourceAddress; }
-
-		// Set destination MAC address in Ethernet header
-		ArpEntry arpEntry = this.arpCache.lookup(nextHop);
-		if (null == arpEntry){
+		if (bestMatch == null){
 			ether.setDestinationMACAddress(etherPacket.getSourceMAC().toBytes());
 		} else{
-			ether.setDestinationMACAddress(arpEntry.getMac().toBytes());
+			// If no gateway, then nextHop is IP destination
+			int nextHop = bestMatch.getGatewayAddress();
+			if (0 == nextHop)
+			{ nextHop = sourceAddress; }
+
+			// Set destination MAC address in Ethernet header
+			ArpEntry arpEntry = this.arpCache.lookup(nextHop);
+			if (null == arpEntry){
+				ether.setDestinationMACAddress(etherPacket.getSourceMAC().toBytes());
+			} else{
+				ether.setDestinationMACAddress(arpEntry.getMac().toBytes());
+			}
 		}
+
 
 		// set up ip header
 		ip.setTtl((byte)64);

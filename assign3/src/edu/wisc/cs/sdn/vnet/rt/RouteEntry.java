@@ -80,7 +80,7 @@ public class RouteEntry
 	{ this.iface = iface; }
 
 	public int getCost() {
-		return cost;
+		return this.cost;
 	}
 
 	public void setCost(int cost) {
@@ -92,7 +92,7 @@ public class RouteEntry
 	}
 
 	public RouteTable getParent() {
-		return parent;
+		return this.parent;
 	}
 
 	public void start(){
