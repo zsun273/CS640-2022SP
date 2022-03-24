@@ -222,7 +222,7 @@ public class RouteTable
 				return false;
 			}
 			if (gwIp != 0){
-				entry.restart();
+				entry.reset();
 			}
 			entry.setGatewayAddress(gwIp);
 			entry.setInterface(iface);

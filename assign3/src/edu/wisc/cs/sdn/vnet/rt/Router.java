@@ -323,21 +323,21 @@ public class Router extends Device
 		RIPv2 rip = new RIPv2();
 
 		// set ethernet header
-		ether.setEtherType(Ethernet.TYPE_IPV4);
+		ether.setEtherType(Ethernet.TYPE_IPv4);
         ether.setSourceMACAddress("FF:FF:FF:FF:FF:FF");
 		if (broadcast == true){
 			ether.setDestinationMACAddress("FF:FF:FF:FF:FF:FF");
 		} else{
-			ether.setDestinationMACAddress(iface.getMAacAddress().toBytes());
+			ether.setDestinationMACAddress(iface.getMacAddress().toBytes());
 		}
 
 		// set ip
-		ip.setTtl((byte)64);
-		ip.setProtocol(IPv4.PROTOCOL_UDP);
+		ipPacket.setTtl((byte)64);
+		ipPacket.setProtocol(IPv4.PROTOCOL_UDP);
 		if (broadcast == true){
-			ip.setDestinationAddress("224.0.0.9");
+			ipPacket.setDestinationAddress("224.0.0.9");
 		} else{
-			ip.setDestinationAddress(iface.getIpAddress());
+			ipPacket.setDestinationAddress(iface.getIpAddress());
 		}
 
 		// set udp
@@ -346,9 +346,9 @@ public class Router extends Device
 
 		// set rip command
 		if (request){
-			ripPacket.setCommand(RIPv2.COMMAND_REQUEST);
+			rip.setCommand(RIPv2.COMMAND_REQUEST);
 		} else {
-			ripPacket.setCommand(RIPv2.COMMAND_RESPONSE);
+			rip.setCommand(RIPv2.COMMAND_RESPONSE);
 		}
 
 		for (RouteEntry entry: this.routeTable.getEntries()) {
