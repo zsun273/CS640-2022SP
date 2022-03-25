@@ -322,7 +322,7 @@ public class Router extends Device
 			int subnetMask = iface.getSubnetMask();
 			int destination = iface.getIpAddress() & subnetMask;
 			// int destinationAddr, int gatewayAddr, int maskAddr, Iface iface, int cost
-			this.routeTable.insert(destination, 0, subnetMask, iface, 1);
+			this.routeTable.insert(destination, 0, subnetMask, iface, 0);
 		}
 		System.out.println("Create static route table");
 		System.out.println("--------------------------------------------");

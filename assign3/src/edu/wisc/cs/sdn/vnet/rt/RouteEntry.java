@@ -119,7 +119,7 @@ public class RouteEntry
 
 	public String toString()
 	{
-		return String.format("%s \t%s \t%s \t%s \t%d",
+		return String.format("%s \t%s \t%s \t%s \t\t%d",
 				IPv4.fromIPv4Address(this.destinationAddress),
 				IPv4.fromIPv4Address(this.gatewayAddress),
 				IPv4.fromIPv4Address(this.maskAddress),
