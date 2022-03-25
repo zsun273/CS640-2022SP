@@ -253,7 +253,9 @@ public class Router extends Device
 		ether.setSourceMACAddress(inIface.getMacAddress().toBytes());
 		int sourceAddress = ipPacket.getSourceAddress();
 
-
+		/**
+		 * not sure about how to set the destination address for ethernet
+		 */
 		RouteEntry bestMatch = this.routeTable.lookup(sourceAddress);
 		if (bestMatch == null){
 			ether.setDestinationMACAddress(etherPacket.getSourceMAC().toBytes());
@@ -271,7 +273,6 @@ public class Router extends Device
 				ether.setDestinationMACAddress(arpEntry.getMac().toBytes());
 			}
 		}
-
 
 		// set up ip header
 		ip.setTtl((byte)64);
@@ -310,6 +311,7 @@ public class Router extends Device
 			data.setData(icmpPayload);
 		}
 
+		System.out.println("ICMP packet type: " + type + " code: " + code + " ready!" );
 		sendPacket(ether, inIface);
 		System.out.println("ICMP packet sent");
 	}
@@ -394,13 +396,13 @@ public class Router extends Device
 
 	public void handleRIPpacket(Ethernet etherPacket, Iface inIface){
 		// Make sure it's an IP packet
-		if (etherPacket.getEtherType() != Ethernet.TYPE_IPv4)
-		{ return; }
+//		if (etherPacket.getEtherType() != Ethernet.TYPE_IPv4)
+//		{ return; }
 
 		// Get IP header
 		IPv4 ipPacket = (IPv4)etherPacket.getPayload();
-		if (ipPacket.getProtocol() != IPv4.PROTOCOL_UDP)
-		{return; }
+//		if (ipPacket.getProtocol() != IPv4.PROTOCOL_UDP)
+//		{return; }
 
 		UDP udpPacket = (UDP)ipPacket.getPayload();
 		// Verify checksum
@@ -427,17 +429,19 @@ public class Router extends Device
 				RouteEntry found = this.routeTable.lookup(riPv2Entry.getAddress());
 				if (found == null || found.getCost() > cost){
 					if (found != null) {
+						System.out.println("Updating this entry into route table: " + riPv2Entry);
 						System.out.println("Find a better metric from: " + found.getCost() + "to: " + cost);
 						this.routeTable.update(riPv2Entry.getAddress(), riPv2Entry.getNextHopAddress(),
 								riPv2Entry.getSubnetMask(), inIface, cost);
 					} else {
-						System.out.println("Insert a new entry into route table");
+						System.out.println("Insert a new entry into route table: " + riPv2Entry);
 						this.routeTable.insert(riPv2Entry.getAddress(), riPv2Entry.getNextHopAddress(),
 								riPv2Entry.getSubnetMask(), inIface, cost);
 					}
 
 					for (Iface iface: this.interfaces.values()){
 						// solicited RIP response
+						System.out.println("Send solicited RIP response");
 						this.sendRIP(iface, false, false);
 					}
 				}
@@ -445,6 +449,7 @@ public class Router extends Device
 		} else if(rip.getCommand() == RIPv2.COMMAND_REQUEST){
 			System.out.println("Get a RIP request Command");
 			// send a unsolicited RIP response
+			System.out.println("Send unsolicited RIP response");
 			this.sendRIP(inIface, true, false);
 			return;
 		}
