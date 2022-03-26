@@ -433,10 +433,21 @@ public class Router extends Device
 						System.out.println("Find a better metric from: " + found.getCost() + "to: " + cost);
 						this.routeTable.update(riPv2Entry.getAddress(), riPv2Entry.getNextHopAddress(),
 								riPv2Entry.getSubnetMask(), inIface, cost);
+
+						System.out.println("Updated static route table");
+						System.out.println("--------------------------------------------");
+						System.out.println(this.routeTable.toString());
+						System.out.println("--------------------------------------------");
+
 					} else {
 						System.out.println("Insert a new entry into route table: " + riPv2Entry);
 						this.routeTable.insert(riPv2Entry.getAddress(), riPv2Entry.getNextHopAddress(),
 								riPv2Entry.getSubnetMask(), inIface, cost);
+
+						System.out.println("Inserted static route table");
+						System.out.println("--------------------------------------------");
+						System.out.println(this.routeTable.toString());
+						System.out.println("--------------------------------------------");
 					}
 
 					for (Iface iface: this.interfaces.values()){
@@ -453,11 +464,6 @@ public class Router extends Device
 			this.sendRIP(inIface, true, false);
 			return;
 		}
-
-		System.out.println("Current static route table");
-		System.out.println("--------------------------------------------");
-		System.out.println(this.routeTable.toString());
-		System.out.println("--------------------------------------------");
 
 	}
 
