@@ -87,8 +87,8 @@ public class Router extends Device
 	 */
 	public void handlePacket(Ethernet etherPacket, Iface inIface)
 	{
-		System.out.println("*** -> Received packet: " +
-				etherPacket.toString().replace("\n", "\n\t"));
+//		System.out.println("*** -> Received packet: " +
+//				etherPacket.toString().replace("\n", "\n\t"));
 
 		/********************************************************************/
 		/* TODO: Handle packets                                             */
@@ -453,6 +453,11 @@ public class Router extends Device
 			this.sendRIP(inIface, true, false);
 			return;
 		}
+
+		System.out.println("Current static route table");
+		System.out.println("--------------------------------------------");
+		System.out.println(this.routeTable.toString());
+		System.out.println("--------------------------------------------");
 
 	}
 
