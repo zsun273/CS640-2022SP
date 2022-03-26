@@ -227,7 +227,6 @@ public class RouteTable
 			entry.setGatewayAddress(gwIp);
 			entry.setInterface(iface);
 			entry.setCost(cost);
-			System.out.println("Cost set to : " + cost);
 		}
 		return true;
 	}

@@ -322,7 +322,7 @@ public class Router extends Device
 			int subnetMask = iface.getSubnetMask();
 			int destination = iface.getIpAddress() & subnetMask;
 			// int destinationAddr, int gatewayAddr, int maskAddr, Iface iface, int cost
-			this.routeTable.insert(destination, 0, subnetMask, iface, 0);
+			this.routeTable.insert(destination, 0, subnetMask, iface, 1);
 		}
 		System.out.println("Create static route table");
 		System.out.println("--------------------------------------------");
@@ -424,6 +424,10 @@ public class Router extends Device
 			// send a solicited RIP response
 			for (RIPv2Entry riPv2Entry: rip.getEntries()) {
 				int cost = riPv2Entry.getMetric() + 1;
+				if (cost >= 16) {
+					System.out.println("Metric larger than 15, DROP!");
+					return;
+				}
 				riPv2Entry.setMetric(cost);
 
 				RouteEntry found = this.routeTable.lookup(riPv2Entry.getAddress());
