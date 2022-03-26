@@ -167,10 +167,10 @@ public class RouteTable
 
 	public void insert(int dstIp, int gwIp, int maskIp, Iface iface, int cost) {
 		RouteEntry entry = new RouteEntry(dstIp, gwIp, maskIp, iface);
-		entry.setCost(cost);
-		entry.setParent(this);
 
 		synchronized (this.entries){
+			entry.setCost(cost);
+			entry.setParent(this);
 			this.entries.add(entry);
 			if (gwIp != 0){ // not directly reachble via router's interface
 				entry.start();
@@ -227,6 +227,7 @@ public class RouteTable
 			entry.setGatewayAddress(gwIp);
 			entry.setInterface(iface);
 			entry.setCost(cost);
+			System.out.println("Cost set to : " + cost);
 		}
 		return true;
 	}

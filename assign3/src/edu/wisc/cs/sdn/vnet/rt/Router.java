@@ -430,7 +430,7 @@ public class Router extends Device
 				if (found == null || found.getCost() > cost){
 					if (found != null) {
 						System.out.println("Updating this entry into route table: " + riPv2Entry);
-						System.out.println("Find a better metric from: " + found.getCost() + "to: " + cost);
+						System.out.println("Find a better metric from: " + found.getCost() + " to: " + cost);
 						this.routeTable.update(riPv2Entry.getAddress(), riPv2Entry.getNextHopAddress(),
 								riPv2Entry.getSubnetMask(), inIface, cost);
 
