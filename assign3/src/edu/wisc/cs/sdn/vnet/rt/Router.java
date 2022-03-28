@@ -253,12 +253,9 @@ public class Router extends Device
 		ether.setSourceMACAddress(inIface.getMacAddress().toBytes());
 		int sourceAddress = ipPacket.getSourceAddress();
 
-		/**
-		 * not sure about how to set the destination address for ethernet
-		 */
 		RouteEntry bestMatch = this.routeTable.lookup(sourceAddress);
 		if (bestMatch == null){
-			ether.setDestinationMACAddress(etherPacket.getSourceMAC().toBytes());
+			return;
 		} else{
 			// If no gateway, then nextHop is IP destination
 			int nextHop = bestMatch.getGatewayAddress();
