@@ -11,5 +11,9 @@ public class Receiver {
         this.filename = filename;
 
         System.out.println("Receiver WIP");
+
+        while(true){
+            // listening
+        }
     }
 }
