@@ -23,10 +23,11 @@ public class Sender {
     /** next expected sequence number after sending data*/
     private int nextSeqNum;
 
+    /** current ack number*/
     private int currAck;
 
     /** Last Acked sequence position*/
-    private int lastAck;
+    private int lastAcked;
 
     private Timer timer;
 
@@ -41,6 +42,11 @@ public class Sender {
     boolean open;
     boolean stopSend;
 
+    private int dataTransfered;
+    private int numPacketsSent;
+    private int getNumRetransmission;
+    private int numDupAcks;
+
     public Sender(int senderPort, String remoteIP, int receiverPort, String filename, int mtu, int sws) {
         this.senderPort = senderPort;
         this.remoteIP = remoteIP;
@@ -52,10 +58,17 @@ public class Sender {
         this.sequenceNum = 0;
         this.nextSeqNum = 0;
         this.currAck = 0;
-        this.lastAck = -1;
+        this.lastAcked = -1;
         this.slidingWindow = new HashMap<>(sws);
+        this.open = false;
+        this.stopSend = false;
         // mtu - header: (seq number + ack + timestamp + length + flag + all zero + checksum)
         this.payloadsize = mtu - 24;
+
+        this.dataTransfered = 0;
+        this.numPacketsSent = 0;
+        this.getNumRetransmission = 0;
+        this.numDupAcks = 0;
 
         System.out.println("Sender: from port: " + senderPort + " to port: " + receiverPort);
 
@@ -81,14 +94,15 @@ public class Sender {
 
         try {
             // three-way handshake initialization
+            // send first SYN here from sender
             // TODO: do we need to make sure only one thread is sending (using lock?)
             ArrayList<Integer> flagBits = new ArrayList<>();
             flagBits.add(SYN);
-            byte[] data = createPacket(nextSeqNum, new byte[0], flagBits);
+            byte[] data = createPacket(sequenceNum, new byte[0], flagBits);
             DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(remoteIP), receiverPort);
             senderSocket.send(packet);
-
-            slidingWindow.put(nextSeqNum, data);
+            this.numPacketsSent ++;
+            slidingWindow.put(sequenceNum, data);
             output(data, true);
             updateAfterSend(data);
 
@@ -104,7 +118,6 @@ public class Sender {
         int length = getLength(lengthNFlags);
         int s = getFlag(lengthNFlags, SYN);
         int f = getFlag(lengthNFlags, FIN);
-        int a = getFlag(lengthNFlags, ACK);
 
         if (s == 1 || f == 1 || length > 0){
             sequenceNum = nextSeqNum;
@@ -125,13 +138,15 @@ public class Sender {
 
         int receivedSeqNum = getSequenceNum(data);
         if (s == 1 || f == 1 || length > 0){
-            currAck = receivedSeqNum + length;
-        } else {
-            currAck = receivedSeqNum + 1;
+            if (length > 0){
+                currAck = receivedSeqNum + length;
+            } else {
+                currAck = receivedSeqNum + 1;
+            }
         }
 
         if (a == 1){
-            lastAck = getAckNum(data) - 1; // what if out of order
+            lastAcked = getAckNum(data) - 1; // what if out of order
             // refresh timer
             if (timer != null){
                 timer.cancel();
@@ -156,7 +171,7 @@ public class Sender {
         public void run() {
             try {
                 // TODO: maybe need lock here
-                nextSeqNum = lastAck + 1;
+                nextSeqNum = lastAcked + 1;
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -177,7 +192,7 @@ public class Sender {
 
         byte[] lengthFlagsBytes = ByteBuffer.allocate(4).putInt(lengthAndFlags).array();
         byte[] zeros = new byte[2];
-        short checkSum = 0;             // TODO: do we need to calculate check sum here?
+        short checkSum = computeCheckSum();             // TODO: do we need to calculate check sum here?
         byte[] checkSumBytes = ByteBuffer.allocate(2).putShort(checkSum).array();
 
         ByteBuffer packet = ByteBuffer.allocate(24 + payload.length);
@@ -273,6 +288,27 @@ public class Sender {
                 + String.valueOf(getAckNum(packetBytes));
 
         System.out.println(output);
+    }
+
+    private short computeCheckSum() {
+        return (short)0;
+    } // TODO: implement checksum computation
+
+    /** Return timeout in nanoseconds */
+    private long timeOutCalculation(int sequenceNum, long timeStamp) {
+        long ERTT = 0, EDEV = 0, T0, SRTT = 0, SDEV;
+        if (sequenceNum == 0){
+            ERTT = System.nanoTime() - timeStamp;
+            EDEV = 0;
+            T0 = 2*ERTT;
+        } else {
+            SRTT = System.nanoTime() - timeStamp;
+            SDEV = Math.abs(SRTT - ERTT);
+            ERTT = (long) (0.875 * ERTT + (1-0.875) * SRTT);
+            EDEV = (long) (0.75*EDEV + (1-0.75) * SDEV);
+            T0 = ERTT + 4*EDEV;
+        }
+        return T0;
     }
 
     public class ReceiveThread extends Thread {
