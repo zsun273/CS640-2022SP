@@ -99,7 +99,7 @@ public class Receiver {
                             // the ACK number sender sends back is not what we expected
                             // something wrong with previous packet
 
-                            // resend precious packet?
+                            // resend previous packet?
                             continue;
                         }
                     }
@@ -126,7 +126,7 @@ public class Receiver {
                             flagBits.add(SYN);
                         }
                         flagBits.add(ACK);
-                        byte[] returnPacket = createPacket(sequenceNum, new byte[0], flagBits);
+                        byte[] returnPacket = createPacket(sequenceNum, new byte[0], flagBits, getTimeStamp(incomingData));
                         listenSocket.send(new DatagramPacket(returnPacket, returnPacket.length, senderAddr, senderPort));
 
                         // print out the sent packet
@@ -138,7 +138,7 @@ public class Receiver {
                     else if (length > 0) {// if we receive data -> send back ack
                         if (open == true){
                             flagBits.add(ACK);
-                            byte[] returnPacket = createPacket(sequenceNum, new byte[0], flagBits);
+                            byte[] returnPacket = createPacket(sequenceNum, new byte[0], flagBits, getTimeStamp(incomingData));
                             listenSocket.send(new DatagramPacket(returnPacket, returnPacket.length, senderAddr, senderPort));
 
                             // print out the sent packet
@@ -250,10 +250,10 @@ public class Receiver {
     }
 
     /** Create a packet in required format */
-    private byte[] createPacket(int sequenceNum, byte[] payload, ArrayList<Integer> flags) {
+    private byte[] createPacket(int sequenceNum, byte[] payload, ArrayList<Integer> flags, long timestamp) {
         byte[] sequenceNumBytes = ByteBuffer.allocate(4).putInt(sequenceNum).array();
         byte[] ackNumBytes = ByteBuffer.allocate(4).putInt(receiverACK).array();
-        byte[] timestampBytes = ByteBuffer.allocate(8).putLong(System.nanoTime()).array();
+        byte[] timestampBytes = ByteBuffer.allocate(8).putLong(timestamp).array();
 
         int lengthAndFlags = payload.length << 3;
         for (int flag: flags){

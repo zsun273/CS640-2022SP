@@ -1,3 +1,7 @@
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -37,10 +41,11 @@ public class Sender {
     private static final int NUM_RETRANSMISSION = 16;
     private static final int TIME_OUT = 30000;
 
-    private HashMap<Integer, byte[]> slidingWindow;
+    private HashMap<Integer, byte[]> slidingWindow; // packets in sliding window are sent but unacked packets
     private int payloadsize;
     boolean open;
     boolean stopSend;
+    boolean finalPacket;
 
     private int dataTransfered;
     private int numPacketsSent;
@@ -102,7 +107,7 @@ public class Sender {
             DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(remoteIP), receiverPort);
             senderSocket.send(packet);
             this.numPacketsSent ++;
-            slidingWindow.put(sequenceNum, data);
+            //slidingWindow.put(sequenceNum, data);
             output(data, true);
             updateAfterSend(data);
 
@@ -123,10 +128,12 @@ public class Sender {
             sequenceNum = nextSeqNum;
             if (length > 0){
                 nextSeqNum = sequenceNum + length;
+                dataTransfered += length;
             } else {
                 nextSeqNum = sequenceNum + 1;
             }
         }
+        numPacketsSent ++;
     }
 
     private void updateAfterReceive(byte[] data) {
@@ -313,13 +320,101 @@ public class Sender {
 
     public class ReceiveThread extends Thread {
         public void run(){
+            try {
+                byte[] incomingData = new byte[24]; // receiver will not send data back
+                DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
+
+                try {
+                    while(stopSend == false){
+                        senderSocket.receive(incomingPacket);
+
+                        int lengthNFlags = getLengthNFlags(incomingData);
+                        int length = getLength(lengthNFlags);
+                        int s = getFlag(lengthNFlags, SYN);
+                        int f = getFlag(lengthNFlags, FIN);
+                        int a = getFlag(lengthNFlags, ACK);
+
+                        // TODO: check if checksum is correct
+
+                        // TODO: check if ACK number is correct
+                        if (nextSeqNum != getAckNum(incomingData)){
+                            // ack number is not correct
+
+                            continue;
+                        }
+
+                        // check complete, handle incoming packet
+                        // print out received packet
+                        output(incomingData, false);
+
+                        // update variables after receiving this packet
+                        updateAfterReceive(incomingData);
+
+                        ArrayList<Integer> flagBits = new ArrayList<>();
+                        if (s == 1 || f == 1) { // receive a SYN or FIN from receiver
+                            flagBits.add(ACK);
+                            byte[] ackPacket = createPacket(sequenceNum, new byte[0], flagBits);
+                            senderSocket.send(new DatagramPacket(ackPacket, ackPacket.length, InetAddress.getByName(remoteIP), receiverPort));
+
+                            // output the packet just sent
+                            output(ackPacket, true);
+
+                        }
+                        else { // only a==1
+                            setTimer();
+                            if (finalPacket == true) { // we received the ack from final packet
+                                try {
+                                    flagBits.add(FIN);
+                                    byte[] finData = createPacket(nextSeqNum, new byte[0], flagBits);
+                                    DatagramPacket finPacket = new DatagramPacket(finData, finData.length, InetAddress.getByName(remoteIP), receiverPort);
+                                    senderSocket.send(finPacket);
+
+                                    // output packet sent
+                                    output(finData, true);
+
+                                    // update variables after sent
+                                    updateAfterSend(finData);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+
+                        }
+
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
         }
     }
 
     public class SendThread extends Thread {
         public void run() {
+            try {
+                FileInputStream fileInputStream = new FileInputStream(new File(filename));
 
+                try {
+                    while(stopSend == false){
+                        byte[] fileData = new byte[sws];
+
+                        // wait for connection established
+                        if (open == true && finalPacket == false) {
+                            // send data:
+                            // 1. check if sliding window full
+                            // 2.
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } catch (FileNotFoundException e) {
+                System.out.println("File not found");
+                e.printStackTrace();
+            }
         }
     }
 }
