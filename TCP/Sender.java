@@ -2,16 +2,27 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 
+/*
+    Sender class
+
+    When send packets:
+    1): if exceeds max transfer time (16), report error and stop
+    2): set a timer for the packet, if not receiving ack in a timeout, retransmit
+    3): put sent data to buffer (sliding window)
+
+    When receive packets:
+    1): check ack, remove acked data and any data before the acked data if in buffer
+                   if 3 same consecutive acks, resend packets in buffer
+    2): update rtt (timeout) according to acked packet time
+ */
 public class Sender {
     private DatagramSocket senderSocket;
     private int senderPort;
@@ -20,18 +31,29 @@ public class Sender {
     private String filename;
     private int mtu;
     private int sws;
+    private int dupAckTimes; // keep track of same consecutive ack times
+
+    /** stores the file being sent as a byte array */
+    private FileInputStream fileReader;
+
+    /** file being sent */
+    private File file;
 
     /** current sequence number*/
-    private int sequenceNum;
-
-    /** next expected sequence number after sending data*/
-    private int nextSeqNum;
+//    private int sequenceNum;
+//
+//    /** next expected sequence number after sending data*/
+//    private int nextSeqNum;
 
     /** current ack number*/
     private int currAck;
 
     /** Last Acked sequence position*/
     private int lastAcked;
+
+    /** Last byte being sent, calculated by sequence number + length of data,
+     * next packet's sequence number should be this + 1*/
+    private int lastSent;
 
     private Timer timer;
 
@@ -42,6 +64,9 @@ public class Sender {
     private static final int TIME_OUT = 30000;
 
     private HashMap<Integer, byte[]> slidingWindow; // packets in sliding window are sent but unacked packets
+    private long timeout;  // timeout, update after each packet received
+    private HashMap<Integer, Timer> timerMap; // map stores packet -> a timer corresponds to it
+    private HashMap<Integer, Integer> timesMap; // map stores packet -> send times
     private int payloadsize;
     boolean open;
     boolean stopSend;
@@ -59,12 +84,23 @@ public class Sender {
         this.filename = filename;
         this.mtu = mtu;
         this.sws = sws;
+        this.dupAckTimes = 0;
+        try {
+            this.file = new File(filename);
+            this.fileReader = new FileInputStream(this.file);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
-        this.sequenceNum = 0;
-        this.nextSeqNum = 0;
+        this.timeout = 0;
+        this.timerMap = new HashMap<>();
+        this.timesMap = new HashMap<>();
+        this.lastSent = -1;
+//        this.sequenceNum = 0;
+//        this.nextSeqNum = 0;
         this.currAck = 0;
         this.lastAcked = -1;
-        this.slidingWindow = new HashMap<>(sws);
+        this.slidingWindow = new HashMap<>(sws); // assigning a size may not work here as hashmap can resize itself?
         this.open = false;
         this.stopSend = false;
         // mtu - header: (seq number + ack + timestamp + length + flag + all zero + checksum)
@@ -103,7 +139,7 @@ public class Sender {
             // TODO: do we need to make sure only one thread is sending (using lock?)
             ArrayList<Integer> flagBits = new ArrayList<>();
             flagBits.add(SYN);
-            byte[] data = createPacket(sequenceNum, new byte[0], flagBits);
+            byte[] data = createPacket(lastSent+1, new byte[0], flagBits);
             DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(remoteIP), receiverPort);
             senderSocket.send(packet);
             this.numPacketsSent ++;
@@ -125,12 +161,13 @@ public class Sender {
         int f = getFlag(lengthNFlags, FIN);
 
         if (s == 1 || f == 1 || length > 0){
-            sequenceNum = nextSeqNum;
+            //sequenceNum = nextSeqNum;
+            lastSent += length;
             if (length > 0){
-                nextSeqNum = sequenceNum + length;
+                //nextSeqNum = sequenceNum + length;
                 dataTransfered += length;
             } else {
-                nextSeqNum = sequenceNum + 1;
+                //nextSeqNum = sequenceNum + 1;
             }
         }
         numPacketsSent ++;
@@ -153,7 +190,37 @@ public class Sender {
         }
 
         if (a == 1){
-            lastAcked = getAckNum(data) - 1; // what if out of order
+            int ack = getAckNum(data) - 1;
+            if (ack == lastAcked && ++dupAckTimes >= 3) { // fast retransmit
+                for (int key : slidingWindow.keySet()) {
+                    byte[] packet = slidingWindow.get(key);
+                    try {
+                        DatagramPacket udpPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(remoteIP), receiverPort);
+                        senderSocket.send(udpPacket);
+
+                        setTimeOut(getSequenceNum(packet), packet); // put a new timer after this
+                        output(packet, true);
+                    } catch (Exception e){
+                        e.printStackTrace();
+                    }
+
+                }
+            } else { // normal
+                lastAcked = getAckNum(data) - 1;
+                dupAckTimes = 0;
+                for (int key : slidingWindow.keySet()) { // remove acked data from buffer
+                    if (key <= receivedSeqNum) {
+                        slidingWindow.remove(key);
+                        timerMap.get(key).cancel();
+                        timerMap.remove(key);
+                        timesMap.remove(key);
+                    }
+                }
+            }
+
+            // update timeout
+            timeout = timeOutCalculation(receivedSeqNum, getTimeStamp(data));
+
             // refresh timer
             if (timer != null){
                 timer.cancel();
@@ -178,10 +245,49 @@ public class Sender {
         public void run() {
             try {
                 // TODO: maybe need lock here
-                nextSeqNum = lastAcked + 1;
+                //nextSeqNum = lastAcked + 1;
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private void setTimeOut(int seqNum, byte[] packet) {
+        int times = timesMap.getOrDefault(seqNum, 0) + 1;
+        if (times > NUM_RETRANSMISSION) { // need to halt the process, but how?
+            System.out.println("Maximum transmission times of a single packect is reached. Transmission failed!!!");
+        }
+        Timer timer = new Timer();
+
+        // cancel previous timer on the same packet if any
+        Timer preTimer = timerMap.get(seqNum);
+        if (preTimer != null)
+            preTimer.cancel();
+
+        timerMap.put(seqNum, timer);
+        timesMap.put(seqNum, times);
+        timer.schedule(new TimeCheck(seqNum, packet), timeout);
+    }
+
+    class TimeCheck extends TimerTask {
+        int seqNum;
+        byte[] packet;
+        TimeCheck(int seqNum, byte[] data) {
+            this.seqNum = seqNum;
+            this.packet = data;
+        }
+
+        public void run() { // resend package if timeout
+            try {
+                DatagramPacket udpPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(remoteIP), receiverPort);
+                senderSocket.send(udpPacket);
+
+                setTimeOut(getSequenceNum(packet), packet); // put a new timer after this
+                output(packet, true);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
         }
     }
 
@@ -210,6 +316,9 @@ public class Sender {
         packet.put(zeros);
         packet.put(checkSumBytes);
         packet.put(payload);
+
+        if (payload.length > 0 )
+            slidingWindow.put(sequenceNum, packet.array());
 
         return packet.array();
     }
@@ -337,11 +446,11 @@ public class Sender {
                         // TODO: check if checksum is correct
 
                         // TODO: check if ACK number is correct
-                        if (nextSeqNum != getAckNum(incomingData)){
-                            // ack number is not correct
-
-                            continue;
-                        }
+//                        if (nextSeqNum != getAckNum(incomingData)){
+//                            // ack number is not correct
+//
+//                            continue;
+//                        }
 
                         // check complete, handle incoming packet
                         // print out received packet
@@ -353,7 +462,7 @@ public class Sender {
                         ArrayList<Integer> flagBits = new ArrayList<>();
                         if (s == 1 || f == 1) { // receive a SYN or FIN from receiver
                             flagBits.add(ACK);
-                            byte[] ackPacket = createPacket(sequenceNum, new byte[0], flagBits);
+                            byte[] ackPacket = createPacket(lastSent+1, new byte[0], flagBits);
                             senderSocket.send(new DatagramPacket(ackPacket, ackPacket.length, InetAddress.getByName(remoteIP), receiverPort));
 
                             // output the packet just sent
@@ -361,11 +470,11 @@ public class Sender {
 
                         }
                         else { // only a==1
-                            setTimer();
+                            setTimer(); // what is the purpose of this?
                             if (finalPacket == true) { // we received the ack from final packet
                                 try {
                                     flagBits.add(FIN);
-                                    byte[] finData = createPacket(nextSeqNum, new byte[0], flagBits);
+                                    byte[] finData = createPacket(lastSent+1, new byte[0], flagBits);
                                     DatagramPacket finPacket = new DatagramPacket(finData, finData.length, InetAddress.getByName(remoteIP), receiverPort);
                                     senderSocket.send(finPacket);
 
@@ -394,27 +503,64 @@ public class Sender {
 
     public class SendThread extends Thread {
         public void run() {
-            try {
-                FileInputStream fileInputStream = new FileInputStream(new File(filename));
+            //try {
+                //FileInputStream fileInputStream = new FileInputStream(new File(filename));
 
                 try {
-                    while(stopSend == false){
-                        byte[] fileData = new byte[sws];
+                    while(stopSend == false) {
 
                         // wait for connection established
-                        if (open == true && finalPacket == false) {
-                            // send data:
-                            // 1. check if sliding window full
-                            // 2.
+                        if (open == true && finalPacket == false) { // send data
+
+                            // determine how many bytes to send OR wait
+                            long remainingBytes = file.length() - 1 - lastSent;
+                            int swCapacity = sws - (lastSent - lastAcked);
+
+                            if (remainingBytes <= mtu && remainingBytes <= swCapacity) { // send in one transmission
+                                // finalPacket = true;  can we set finalPacket to true at this point?
+                                byte[] data = new byte[(int) remainingBytes];
+                                if (fileReader.read(data) != -1) {
+                                    ArrayList<Integer> flagBits = new ArrayList<>();
+                                    flagBits.add(ACK);
+                                    byte[] packet = createPacket(lastSent + 1, data, flagBits);
+
+                                    DatagramPacket udpPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(remoteIP), receiverPort);
+                                    senderSocket.send(udpPacket);
+                                    numPacketsSent++;
+                                    setTimeOut(lastSent + 1, packet);
+                                    output(packet, true);
+                                    updateAfterSend(data);
+                                }
+                            }
+
+                            else if (remainingBytes > mtu) {  // send in multiple runs
+                                if (mtu > swCapacity)         // cannot fit in buffer, wait
+                                    continue;
+                                else {                        // can send a packet of size mtu
+                                    byte[] data = new byte[mtu];
+                                    if (fileReader.read(data) != -1) { // read successfully
+                                        ArrayList<Integer> flagBits = new ArrayList<>();
+                                        flagBits.add(ACK);
+                                        byte[] packet = createPacket(lastSent + 1, data, flagBits);
+
+                                        DatagramPacket udpPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(remoteIP), receiverPort);
+                                        senderSocket.send(udpPacket);
+                                        numPacketsSent++;
+                                        setTimeOut(lastSent + 1, packet);
+                                        output(packet, true);
+                                        updateAfterSend(packet);
+                                    }
+                                }
+                            }
                         }
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            } catch (FileNotFoundException e) {
-                System.out.println("File not found");
-                e.printStackTrace();
-            }
+            //} catch (FileNotFoundException e) {
+//                System.out.println("File not found");
+//                e.printStackTrace();
+//            }
         }
     }
 }
