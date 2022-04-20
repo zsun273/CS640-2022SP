@@ -1,3 +1,7 @@
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -8,9 +12,18 @@ import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
 
+/**
+ * Receiver Class
+ * When receiving packets:
+ * 1. if receive a SYN from sender, send back a SYN+ACK, connection established
+ * 2. if receive data from sender, check if checksum is correct,
+ *                                 check if the data packet is out of sequence, if out-of-sequence, put in the buffer
+ *                                 if everything correct, write the data to the designated path and send back ack
+ * 3. if receive a FIN from sender, make sure all received data have been written, send back a FIN+ACK, close connection
+ */
 public class Receiver {
     private int receiverPort;
-    private int mtu;
+    private int mtu;           // how is mtu used in receiver
     private int sws;
     private String filename;
 
@@ -21,22 +34,19 @@ public class Receiver {
     /** Ack number of receiver, next byte receiver expects*/
     private int receiverACK;
 
-    /** Ack number from sender, next byte sender expects*/
-    private int senderACK;
-
     private int lastAcked;
     private int sequenceNum;
     private int nextSeqNum;
-    private int payloadsize;
 
     private static final int SYN = 2;
     private static final int FIN = 1;
     private static final int ACK = 0;
-    private static final int TIME_OUT = 30000;
 
     boolean open;
     boolean stopReceive;
     private long startTime;
+    private FileOutputStream fileWriter;
+    private int dataWritten;
 
     private int dataReceived;
     private int numPacketsReceived;
@@ -53,10 +63,18 @@ public class Receiver {
 
         this.sequenceNum = 0;
         this.receiverACK = 0;
-        this.senderACK = 0;
         this.open = false;
         this.stopReceive = false;
-        this.buffer = new HashMap<>(sws);
+        this.buffer = new HashMap<>();
+
+        this.startTime = System.nanoTime();
+        try{
+            this.fileWriter = new FileOutputStream(new File(filename), true);
+        } catch (FileNotFoundException e) {
+            System.out.println("file or path not found");
+            e.printStackTrace();
+        }
+        this.dataWritten = 0;
 
 
         this.dataReceived = 0;
@@ -82,7 +100,18 @@ public class Receiver {
                     int f = getFlag(lengthNFlags, FIN);
                     int a = getFlag(lengthNFlags, ACK);
 
-                    // TODO: Check if the checksum is correct
+                    short originalChecksum = getCheckSum(incomingData);
+                    // reset checksum to zero
+                    ByteBuffer bb = ByteBuffer.wrap(incomingData);
+                    bb.putShort(22, (short)0);
+                    // compute current checksum
+                    short currChecksum = computeCheckSum(incomingData);
+                    if (currChecksum != originalChecksum) {
+                        System.out.println("Check sum failed! Data Corrupted!");
+                        // drop the packet
+                        wrongCheckSum ++ ;
+                        continue;
+                    }
 
                     // check if out-of-sequence
                     if (s == 1 || f == 1 || length > 0){
@@ -90,8 +119,15 @@ public class Receiver {
                             // incoming packet's sequence number not what receiver expected
                             numOutOfSeq ++;
                             // put out-of-sequence packet into buffer
-                            buffer.put(getSequenceNum(incomingData), incomingData);
-                            continue;
+                            if (buffer.size() < sws){
+                                buffer.put(getSequenceNum(incomingData), incomingData);
+                                continue;
+                            }
+                            else{
+                                // cannot put in buffer, drop and continue
+                                continue;
+                            }
+
                         }
                     }
 
@@ -101,7 +137,7 @@ public class Receiver {
                             // the ACK number sender sends back is not what we expected
                             // something wrong with previous packet
 
-                            // resend previous packet?
+                            // resend previous packet
                             continue;
                         }
                     }
@@ -123,6 +159,7 @@ public class Receiver {
                     if (s == 1 || f == 1) {
                         if (f == 1) {
                             flagBits.add(FIN);
+                            fileWriter.close();
                         }
                         if (s == 1) {
                             flagBits.add(SYN);
@@ -168,27 +205,6 @@ public class Receiver {
 
     }
 
-//    private int checkACK(byte[] data) {
-//        int lengthNFlags = getLengthNFlags(data);
-//        int length = getLength(lengthNFlags);
-//        int s = getFlag(lengthNFlags, SYN);
-//        int f = getFlag(lengthNFlags, FIN);
-//        int a = getFlag(lengthNFlags, ACK);
-//
-//        if (a == 1) { // this packet contains ack number
-//            if (nextSeqNum != getAckNum(data)){
-//                return -1;
-//            }
-//        }
-//
-//        if (s == 1 || f == 1 || length > 0){
-//            if (receiverACK != getSequenceNum(data)) {
-//                return -1;          // incoming packet's sequence number not what receiver expected
-//            }
-//        }
-//
-//        return getAckNum(data);
-//    }
 
     private void updateAfterReceive(byte[] data) {
         int lengthNFlags = getLengthNFlags(data);
@@ -202,7 +218,27 @@ public class Receiver {
             if (length > 0){
                 receiverACK = receivedSeqNum + length;
                 dataReceived += length;
-                // TODO: write the data to the file
+
+                try {
+                    byte[] payload = getPayload(data);
+                    fileWriter.write(payload, dataWritten, length);
+                    dataWritten += length;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                // check if there is data in the buffer can be written
+                try{
+                    while(buffer.containsKey(dataWritten)) { // buffer contains next sequence number
+                        byte[] payload = getPayload(buffer.get(dataWritten));
+                        fileWriter.write(payload, dataWritten, length);
+                        buffer.remove(dataWritten);
+                        dataWritten += length;
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+
             } else {
                 receiverACK = receivedSeqNum + 1;
             }
@@ -234,23 +270,6 @@ public class Receiver {
         }
     }
 
-    private void setTimer() {
-        timer = new Timer();
-        timer.schedule(new TimeOut(), TIME_OUT);
-    }
-
-    public class TimeOut extends TimerTask {
-
-        public void run() {
-            try {
-                // TODO: maybe need lock here
-                nextSeqNum = lastAcked + 1;
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
     /** Create a packet in required format */
     private byte[] createPacket(int sequenceNum, byte[] payload, ArrayList<Integer> flags, long timestamp) {
         byte[] sequenceNumBytes = ByteBuffer.allocate(4).putInt(sequenceNum).array();
@@ -265,7 +284,7 @@ public class Receiver {
 
         byte[] lengthFlagsBytes = ByteBuffer.allocate(4).putInt(lengthAndFlags).array();
         byte[] zeros = new byte[2];
-        short checkSum = computeCheckSum();             // TODO: do we need to calculate check sum here?
+        short checkSum = 0;
         byte[] checkSumBytes = ByteBuffer.allocate(2).putShort(checkSum).array();
 
         ByteBuffer packet = ByteBuffer.allocate(24 + payload.length);
@@ -276,6 +295,11 @@ public class Receiver {
         packet.put(zeros);
         packet.put(checkSumBytes);
         packet.put(payload);
+
+        if (checkSum == 0) {
+            checkSum = computeCheckSum(packet.array());
+            packet.putShort(22, checkSum);
+        }
 
         return packet.array();
     }
@@ -322,6 +346,15 @@ public class Receiver {
         return ByteBuffer.wrap(lengthNFlagsBytes).getInt();
     }
 
+    public short getCheckSum(byte[] packet){
+        byte[] checksumBytes = slicingByteArray(packet, 22, 24);
+        return ByteBuffer.wrap(checksumBytes).getShort();
+    }
+
+    public byte[] getPayload(byte[] packet) {
+        return slicingByteArray(packet, 24, packet.length);
+    }
+
 
     /** Format: [snd/rcv] [time] [flag-list] [seq-number] [number of bytes] [ack number] */
     private void output(byte[] packetBytes, boolean send) {
@@ -332,7 +365,8 @@ public class Receiver {
             output += "rcv";
         }
         output += " ";
-        output += String.valueOf(System.nanoTime()); // TODO: current time or the timestamp in the packet
+        String time = String.valueOf((double)(System.nanoTime() - this.startTime) / Math.pow(10, 9));
+        output += time.substring(0, 6);
         output += " ";
         int lengthNFlags = getLengthNFlags(packetBytes);
 
@@ -363,7 +397,21 @@ public class Receiver {
         System.out.println(output);
     }
 
-    private short computeCheckSum() {
-        return (short)0;
-    } // TODO: implement checksum computation
+    // not sure if correct
+    private short computeCheckSum(byte[] packet) {
+        ByteBuffer bb = ByteBuffer.wrap(packet);
+        bb.rewind();
+        int accumulation = 0;
+        for (int i = 0; i < packet.length; ++i){
+            accumulation += 0xffff & bb.getShort();
+        }
+        // pad to an even number of shorts
+        if (packet.length % 2 > 0){
+            accumulation += (bb.get() & 0xff) << 8;
+        }
+        // add potential carry over
+        accumulation = ((accumulation >> 16) & 0xffff) + (accumulation & 0xffff);
+        short checksum = (short) (~accumulation & 0xffff);
+        return checksum;
+    }
 }

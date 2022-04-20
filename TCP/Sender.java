@@ -463,6 +463,8 @@ public class Sender {
                         short currChecksum = computeCheckSum(incomingData);
                         if (currChecksum != originalChecksum) {
                             System.out.println("Check sum failed! Data Corrupted!");
+                            // drop the packet
+                            continue;
                         }
 
                         // check complete, handle incoming packet
