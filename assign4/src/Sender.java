@@ -161,11 +161,12 @@ public class Sender {
 
         if (s == 1 || f == 1 || length > 0){
             //sequenceNum = nextSeqNum;
-            lastSent += length;
             if (length > 0){
                 //nextSeqNum = sequenceNum + length;
+                lastSent += length;
                 dataTransfered += length;
             } else {
+                lastSent += 1;
                 //nextSeqNum = sequenceNum + 1;
             }
         }
@@ -224,17 +225,15 @@ public class Sender {
             // update timeout
             timeout = timeOutCalculation(receivedSeqNum, getTimeStamp(data));
 
-            // refresh timer
-            if (timer != null){
-                timer.cancel();
-            }
         }
         if (s == 1){
             open = true;
+            System.out.println("Connection established. Open is True");
         }
         if (f == 1){
             open = false;
             stopSend = true;
+            System.out.println("Connection terminated. Open is False. Stop Sending");
         }
     }
 
@@ -448,6 +447,7 @@ public class Sender {
 
                 try {
                     while(stopSend == false){
+                        System.out.println("Sender: Receiving thread receiving......");
                         senderSocket.receive(incomingPacket);
 
                         int lengthNFlags = getLengthNFlags(incomingData);
@@ -526,7 +526,7 @@ public class Sender {
 
                         // wait for connection established
                         if (open == true && finalPacket == false) { // send data
-
+                            System.out.println("Sender: Sending thread sending......");
                             // determine how many bytes to send OR wait
                             long remainingBytes = file.length() - 1 - lastSent;
                             int swCapacity = sws - (lastSent - lastAcked);

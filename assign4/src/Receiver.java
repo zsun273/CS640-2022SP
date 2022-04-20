@@ -92,6 +92,7 @@ public class Receiver {
 
                 while(stopReceive == false){
                     // Receiving
+                    System.out.println("Receiver: receiving date.....");
                     listenSocket.receive(incomingPacket);
 
                     int lengthNFlags = getLengthNFlags(incomingData);
@@ -125,6 +126,7 @@ public class Receiver {
                             }
                             else{
                                 // cannot put in buffer, drop and continue
+                                System.out.println("Buffer full.");
                                 continue;
                             }
 
@@ -234,6 +236,7 @@ public class Receiver {
                         fileWriter.write(payload, dataWritten, length);
                         buffer.remove(dataWritten);
                         dataWritten += length;
+                        System.out.println(length + " bytes of data written");
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
