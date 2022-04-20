@@ -2,7 +2,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -193,6 +192,7 @@ public class Sender {
             int ack = getAckNum(data) - 1;
             if (ack == lastAcked) { // fast retransmit
                 dupAckTimes ++;
+                numDupAcks ++;
                 if (dupAckTimes >= 3) {
                     for (int key : slidingWindow.keySet()) {
                         byte[] packet = slidingWindow.get(key);
@@ -202,6 +202,7 @@ public class Sender {
 
                             setTimeOut(getSequenceNum(packet), packet); // put a new timer after this
                             output(packet, true);
+                            getNumRetransmission ++ ;
                         } catch (Exception e){
                             e.printStackTrace();
                         }
@@ -270,6 +271,7 @@ public class Sender {
 
                 setTimeOut(getSequenceNum(packet), packet); // put a new timer after this
                 output(packet, true);
+                getNumRetransmission ++;
             } catch (Exception e) {
                 e.printStackTrace();
             }

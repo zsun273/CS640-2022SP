@@ -132,15 +132,15 @@ public class Receiver {
                     }
 
                     // TODO: check if ACK number
-                    if (a == 1) { // this packet contains ack number
-                        if (nextSeqNum != getAckNum(incomingData)){
-                            // the ACK number sender sends back is not what we expected
-                            // something wrong with previous packet
-
-                            // resend previous packet
-                            continue;
-                        }
-                    }
+//                    if (a == 1) { // this packet contains ack number
+//                        if (nextSeqNum != getAckNum(incomingData)){
+//                            // the ACK number sender sends back is not what we expected
+//                            // something wrong with previous packet
+//
+//                            // resend previous packet
+//                            continue;
+//                        }
+//                    }
 
                     // check complete, handle incoming packet and send back corresponding ack
                     int senderPort = incomingPacket.getPort();
@@ -214,6 +214,7 @@ public class Receiver {
         int a = getFlag(lengthNFlags, ACK);
 
         int receivedSeqNum = getSequenceNum(data);
+        numPacketsReceived ++ ;
         if (s == 1 || f == 1 || length > 0){
             if (length > 0){
                 receiverACK = receivedSeqNum + length;
@@ -244,13 +245,13 @@ public class Receiver {
             }
         }
 
-        if (a == 1){
-            lastAcked = getAckNum(data) - 1; // what if out of order
-            // refresh timer
-            if (timer != null){
-                timer.cancel();
-            }
-        }
+//        if (a == 1){
+//            lastAcked = getAckNum(data) - 1; // what if out of order
+//            // refresh timer
+//            if (timer != null){
+//                timer.cancel();
+//            }
+//        }
     }
 
     private void updateAfterSend(byte[] data) {
