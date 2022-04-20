@@ -36,6 +36,7 @@ public class Receiver {
 
     boolean open;
     boolean stopReceive;
+    private long startTime;
 
     private int dataReceived;
     private int numPacketsReceived;
@@ -56,6 +57,7 @@ public class Receiver {
         this.open = false;
         this.stopReceive = false;
         this.buffer = new HashMap<>(sws);
+
 
         this.dataReceived = 0;
         this.numPacketsReceived = 0;
