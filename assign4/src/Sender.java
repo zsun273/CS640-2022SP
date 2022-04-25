@@ -522,24 +522,26 @@ public class Sender {
 
     public class SendThread extends Thread {
         public void run() {
-                System.out.println("stopSend: " + stopSend + " open: "+ open + " finalPacket: "+ finalPacket);
+                //System.out.println("stopSend: " + stopSend + " open: "+ open + " finalPacket: "+ finalPacket);
                 try {
                     while(stopSend == false) {
                                                           
                         // wait for connection established
-		        System.out.println("open: " + open + " finalPacket: "+ finalPacket);
+                        System.out.println("open: " + open + " finalPacket: "+ finalPacket);
                         if (open == true && finalPacket == false) { // send data
                             System.out.println("Sender: Sending thread sending......");
                             // determine how many bytes to send OR wait
                             long remainingBytes = file.length() - 1 - lastSent;
                             int swCapacity = sws - (lastSent - lastAcked);
 
-                            // print stats for debugging
-                            System.out.println("remain: " + remainingBytes + ", swCapacity: " + swCapacity);
+                            // data can be sent would be the min(remaining, swCapacity, mtu)
+                            int sentSize = Math.min((int)remainingBytes, swCapacity);
+                            sentSize = Math.min(sentSize, mtu);
+                            if (sentSize > 0) {
+                                if (sentSize == remainingBytes)
+                                    finalPacket = true;
 
-                            if (remainingBytes <= mtu && remainingBytes <= swCapacity) { // send in one transmission
-                                finalPacket = true;  // can we set finalPacket to true at this point?
-                                byte[] data = new byte[(int) remainingBytes];
+                                byte[] data = new byte[sentSize];
                                 if (fileReader.read(data) != -1) {
                                     ArrayList<Integer> flagBits = new ArrayList<>();
                                     flagBits.add(ACK);
@@ -553,28 +555,48 @@ public class Sender {
                                 }
                             }
 
-                            else if (remainingBytes > mtu) {  // send in multiple runs
-                                if (mtu > swCapacity)         // cannot fit in buffer, wait
-                                    continue;
-                                else {                        // can send a packet of size mtu
-                                    byte[] data = new byte[mtu];
-                                    if (fileReader.read(data) != -1) { // read successfully
-                                        ArrayList<Integer> flagBits = new ArrayList<>();
-                                        flagBits.add(ACK);
-                                        byte[] packet = createPacket(lastSent + 1, data, flagBits);
 
-                                        DatagramPacket udpPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(remoteIP), receiverPort);
-                                        senderSocket.send(udpPacket);
-                                        setTimeOut(lastSent + 1, packet);
-                                        output(packet, true);
-                                        updateAfterSend(packet);
-                                    }
-                                }
-                            }
+                            // print stats for debugging
+                            System.out.println("remain: " + remainingBytes + ", swCapacity: " + swCapacity);
+
+//                            if (remainingBytes <= mtu && remainingBytes <= swCapacity) { // send in one transmission
+//                                finalPacket = true;  // can we set finalPacket to true at this point?
+//                                byte[] data = new byte[(int) remainingBytes];
+//                                if (fileReader.read(data) != -1) {
+//                                    ArrayList<Integer> flagBits = new ArrayList<>();
+//                                    flagBits.add(ACK);
+//                                    byte[] packet = createPacket(lastSent + 1, data, flagBits);
+//
+//                                    DatagramPacket udpPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(remoteIP), receiverPort);
+//                                    senderSocket.send(udpPacket);
+//                                    setTimeOut(lastSent + 1, packet);
+//                                    output(packet, true);
+//                                    updateAfterSend(data);
+//                                }
+//                            }
+//
+//                            else if (remainingBytes > mtu) {  // send in multiple runs
+//                                if (mtu > swCapacity)         // cannot fit in buffer, wait
+//                                    continue;
+//                                else {                        // can send a packet of size mtu
+//                                    byte[] data = new byte[mtu];
+//                                    if (fileReader.read(data) != -1) { // read successfully
+//                                        ArrayList<Integer> flagBits = new ArrayList<>();
+//                                        flagBits.add(ACK);
+//                                        byte[] packet = createPacket(lastSent + 1, data, flagBits);
+//
+//                                        DatagramPacket udpPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(remoteIP), receiverPort);
+//                                        senderSocket.send(udpPacket);
+//                                        setTimeOut(lastSent + 1, packet);
+//                                        output(packet, true);
+//                                        updateAfterSend(packet);
+//                                    }
+//                                }
+//                            }
                         }
-			else{
-				continue;
-			}
+//			else{
+//				continue;
+//			}
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
