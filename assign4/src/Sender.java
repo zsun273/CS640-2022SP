@@ -524,7 +524,6 @@ public class Sender {
         public void run() {
 
                 try {
-                    System.out.println("stopSend: " + stopSend + ", open: " + open + ", finalPacket: " + finalPacket);
                     while(stopSend == false) {
                                                           
                         // wait for connection established
@@ -533,6 +532,9 @@ public class Sender {
                             // determine how many bytes to send OR wait
                             long remainingBytes = file.length() - 1 - lastSent;
                             int swCapacity = sws - (lastSent - lastAcked);
+
+                            // print stats for debugging
+                            System.out.println("remain: " + remainingBytes + ", swCapacity: " + swCapacity);
 
                             if (remainingBytes <= mtu && remainingBytes <= swCapacity) { // send in one transmission
                                 finalPacket = true;  // can we set finalPacket to true at this point?
