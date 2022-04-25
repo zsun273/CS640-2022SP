@@ -160,7 +160,7 @@ public class Receiver {
                     if (s == 1 || f == 1) {
                         if (f == 1) {
                             flagBits.add(FIN);
-			    this.stopReceive = true;
+			                this.stopReceive = true;
                             fileWriter.close();
                         }
                         if (s == 1) {
@@ -190,7 +190,10 @@ public class Receiver {
                         }
                     }
                     else {
-                        // not sure
+                        // only receive an ack back
+                        if (getAckNum(incomingData) == 1) {
+                            open = true;
+                        }
                         continue;
                     }
 
@@ -248,13 +251,6 @@ public class Receiver {
             }
         }
 
-//        if (a == 1){
-//            lastAcked = getAckNum(data) - 1; // what if out of order
-//            // refresh timer
-//            if (timer != null){
-//                timer.cancel();
-//            }
-//        }
     }
 
     private void updateAfterSend(byte[] data) {
