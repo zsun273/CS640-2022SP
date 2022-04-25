@@ -42,11 +42,11 @@ public class Sender {
     private int currAck;
 
     /** Last Acked sequence position*/
-    private int lastAcked;
+    private volatile int lastAcked;
 
     /** Last byte being sent, calculated by sequence number + length of data ,
      * next packet's sequence number should be this + 1*/
-    private int lastSent;
+    private volatile int lastSent;
 
     private Timer timer;
     private long startTime;
@@ -61,16 +61,16 @@ public class Sender {
     private HashMap<Integer, Timer> timerMap; // map stores packet -> a timer corresponds to it
     private HashMap<Integer, Integer> timesMap; // map stores packet -> send times
     private int payloadsize;
-    boolean open;
-    boolean stopSend;
-    boolean finalPacket;
+    volatile boolean open;
+    volatile boolean stopSend;
+    volatile boolean finalPacket;
 
-    private int dataTransfered;
-    private int numPacketsSent;
-    private int getNumRetransmission;
-    private int numDupAcks;
+    private volatile int dataTransfered;
+    private volatile int numPacketsSent;
+    private volatile int getNumRetransmission;
+    private volatile int numDupAcks;
 
-    private Object lock = new Object();
+    //private Object lock = new Object();
 
     public Sender(int senderPort, String remoteIP, int receiverPort, String filename, int mtu, int sws) {
         this.senderPort = senderPort;
@@ -442,7 +442,6 @@ public class Sender {
                 DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
 
                 try {
-                    synchronized (lock) {
 
                     while (stopSend == false) {
                         System.out.println("Sender: Receiving thread receiving......");
@@ -505,7 +504,6 @@ public class Sender {
                         }
 
                     }
-                }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -520,7 +518,6 @@ public class Sender {
         public void run() {
                 //System.out.println("stopSend: " + stopSend + " open: "+ open + " finalPacket: "+ finalPacket);
                 try {
-                    synchronized (lock) {
 
                         while (stopSend == false) {
 
@@ -560,7 +557,6 @@ public class Sender {
 
                             }
                         }
-                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
