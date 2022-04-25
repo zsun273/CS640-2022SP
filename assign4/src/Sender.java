@@ -38,12 +38,6 @@ public class Sender {
     /** file being sent */
     private File file;
 
-//    /** current sequence number*/
-//    private int sequenceNum;
-//
-//    /** next expected sequence number after sending data*/
-//    private int nextSeqNum;
-
     /** current ack number*/
     private int currAck;
 
@@ -76,6 +70,8 @@ public class Sender {
     private int getNumRetransmission;
     private int numDupAcks;
 
+    private Object lock = new Object();
+
     public Sender(int senderPort, String remoteIP, int receiverPort, String filename, int mtu, int sws) {
         this.senderPort = senderPort;
         this.remoteIP = remoteIP;
@@ -99,8 +95,6 @@ public class Sender {
         this.timerMap = new HashMap<>();
         this.timesMap = new HashMap<>();
         this.lastSent = -1;
-//        this.sequenceNum = 0;
-//        this.nextSeqNum = 0;
         this.currAck = 0;
         this.lastAcked = -1;
         this.slidingWindow = new HashMap<>(sws); // assigning a size may not work here as hashmap can resize itself?
@@ -448,7 +442,7 @@ public class Sender {
                 DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
 
                 try {
-                    synchronized (this) {
+                    synchronized (lock) {
 
                     while (stopSend == false) {
                         System.out.println("Sender: Receiving thread receiving......");
@@ -526,7 +520,7 @@ public class Sender {
         public void run() {
                 //System.out.println("stopSend: " + stopSend + " open: "+ open + " finalPacket: "+ finalPacket);
                 try {
-                    synchronized (this) {
+                    synchronized (lock) {
 
                         while (stopSend == false) {
 
