@@ -76,7 +76,6 @@ public class Receiver {
         }
         this.dataWritten = 0;
 
-
         this.dataReceived = 0;
         this.numPacketsReceived = 0;
         this.numOutOfSeq = 0;
@@ -175,6 +174,8 @@ public class Receiver {
 
                         // update variables after sending the packet
                         updateAfterSend(returnPacket);
+
+                        this.stopReceive = true;
                     }
                     else if (length > 0) {// if we receive data -> send back ack
                         if (open == true){
