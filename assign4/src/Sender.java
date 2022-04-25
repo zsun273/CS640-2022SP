@@ -90,9 +90,9 @@ public class Sender {
         } catch (Exception e) {
             e.printStackTrace();
         }
-	this.open = false;
-	this.stopSend = false;
-	this.finalPacket = false;
+	    this.open = false;
+	    this.stopSend = false;
+	    this.finalPacket = false;
 
         this.startTime = System.nanoTime();
         this.timeout = 0;
@@ -447,8 +447,11 @@ public class Sender {
                 byte[] incomingData = new byte[24]; // receiver will not send data back
                 DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
 
+                synchronized (this){
+
+
                 try {
-                    while(stopSend == false){
+                    while (stopSend == false) {
                         System.out.println("Sender: Receiving thread receiving......");
                         senderSocket.receive(incomingPacket);
 
@@ -462,7 +465,7 @@ public class Sender {
                         short originalChecksum = getCheckSum(incomingData);
                         // reset checksum to zero
                         ByteBuffer bb = ByteBuffer.wrap(incomingData);
-                        bb.putShort(22, (short)0);
+                        bb.putShort(22, (short) 0);
                         // compute current checksum
                         short currChecksum = computeCheckSum(incomingData);
                         if (currChecksum != originalChecksum) {
@@ -481,19 +484,18 @@ public class Sender {
                         ArrayList<Integer> flagBits = new ArrayList<>();
                         if (s == 1 || f == 1) { // receive a SYN or FIN from receiver
                             flagBits.add(ACK);
-                            byte[] ackPacket = createPacket(lastSent+1, new byte[0], flagBits);
+                            byte[] ackPacket = createPacket(lastSent + 1, new byte[0], flagBits);
                             senderSocket.send(new DatagramPacket(ackPacket, ackPacket.length, InetAddress.getByName(remoteIP), receiverPort));
 
                             // output the packet just sent
                             output(ackPacket, true);
 
-                        }
-                        else { // only a==1
+                        } else { // only a==1
                             // check sliding window hashmap has size 0 --> all acked
                             if (finalPacket == true && slidingWindow.keySet().size() == 0) { // we received the ack from final packet
                                 try {
                                     flagBits.add(FIN);
-                                    byte[] finData = createPacket(lastSent+1, new byte[0], flagBits);
+                                    byte[] finData = createPacket(lastSent + 1, new byte[0], flagBits);
                                     DatagramPacket finPacket = new DatagramPacket(finData, finData.length, InetAddress.getByName(remoteIP), receiverPort);
                                     senderSocket.send(finPacket);
 
@@ -510,6 +512,7 @@ public class Sender {
                         }
 
                     }
+                }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -524,10 +527,12 @@ public class Sender {
         public void run() {
                 //System.out.println("stopSend: " + stopSend + " open: "+ open + " finalPacket: "+ finalPacket);
                 try {
-                    while(stopSend == false) {
-                                                          
+                    synchronized (this) {
+
+                    while (stopSend == false) {
+
                         // wait for connection established
-                        System.out.println("open: " + open + " finalPacket: "+ finalPacket);
+                        // System.out.println("open: " + open + " finalPacket: " + finalPacket);
                         if (open == true && finalPacket == false) { // send data
                             System.out.println("Sender: Sending thread sending......");
                             // determine how many bytes to send OR wait
@@ -535,7 +540,7 @@ public class Sender {
                             int swCapacity = sws - (lastSent - lastAcked);
 
                             // data can be sent would be the min(remaining, swCapacity, mtu)
-                            int sentSize = Math.min((int)remainingBytes, swCapacity);
+                            int sentSize = Math.min((int) remainingBytes, swCapacity);
                             sentSize = Math.min(sentSize, mtu);
                             if (sentSize > 0) {
                                 if (sentSize == remainingBytes)
@@ -598,6 +603,7 @@ public class Sender {
 //				continue;
 //			}
                     }
+                }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
