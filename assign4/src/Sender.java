@@ -90,6 +90,9 @@ public class Sender {
         } catch (Exception e) {
             e.printStackTrace();
         }
+	this.open = false;
+	this.stopSend = false;
+	this.finalPacket = false;
 
         this.startTime = System.nanoTime();
         this.timeout = 0;
@@ -105,7 +108,6 @@ public class Sender {
         this.stopSend = false;
         // mtu - header: (seq number + ack + timestamp + length + flag + all zero + checksum)
         this.payloadsize = mtu - 24;
-
         this.dataTransfered = 0;
         this.numPacketsSent = 0;
         this.getNumRetransmission = 0;
@@ -523,7 +525,7 @@ public class Sender {
 
                 try {
                     while(stopSend == false) {
-
+                                                          
                         // wait for connection established
                         if (open == true && finalPacket == false) { // send data
                             System.out.println("Sender: Sending thread sending......");
