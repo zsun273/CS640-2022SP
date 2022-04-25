@@ -62,6 +62,7 @@ public class Receiver {
         System.out.println("Receiver: receiver port = " + receiverPort);
 
         this.sequenceNum = 0;
+	this.nextSeqNum = 0;
         this.receiverACK = 0;
         this.open = false;
         this.stopReceive = false;
@@ -167,7 +168,7 @@ public class Receiver {
                             flagBits.add(SYN);
                         }
                         flagBits.add(ACK);
-                        byte[] returnPacket = createPacket(sequenceNum, new byte[0], flagBits, getTimeStamp(incomingData));
+                        byte[] returnPacket = createPacket(nextSeqNum, new byte[0], flagBits, getTimeStamp(incomingData));
                         listenSocket.send(new DatagramPacket(returnPacket, returnPacket.length, senderAddr, senderPort));
 
                         // print out the sent packet
@@ -179,7 +180,7 @@ public class Receiver {
                     else if (length > 0) {// if we receive data -> send back ack
                         if (open == true){
                             flagBits.add(ACK);
-                            byte[] returnPacket = createPacket(sequenceNum, new byte[0], flagBits, getTimeStamp(incomingData));
+                            byte[] returnPacket = createPacket(nextSeqNum, new byte[0], flagBits, getTimeStamp(incomingData));
                             listenSocket.send(new DatagramPacket(returnPacket, returnPacket.length, senderAddr, senderPort));
 
                             // print out the sent packet
@@ -402,7 +403,7 @@ public class Receiver {
         ByteBuffer bb = ByteBuffer.wrap(packet);
         bb.rewind();
         int accumulation = 0;
-        for (int i = 0; i < packet.length; i=i+2){
+        for (int i = 0; i < packet.length/2; i++){
             accumulation += 0xffff & bb.getShort();
         }
         // pad to an even number of shorts

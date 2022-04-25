@@ -156,7 +156,8 @@ public class Sender {
 
         if (s == 1 || f == 1 || length > 0){
             //sequenceNum = nextSeqNum;
-            if (length > 0){
+            System.out.println("length: " + length + "lastSent: " + lastSent);
+	    if (length > 0){
                 //nextSeqNum = sequenceNum + length;
                 lastSent += length;
                 dataTransfered += length;
@@ -208,7 +209,7 @@ public class Sender {
                 lastAcked = getAckNum(data) - 1;
                 dupAckTimes = 0;
                 for (int key : slidingWindow.keySet()) { // remove acked data from buffer
-                    if (key <= receivedSeqNum) {
+                    if (key <= lastAcked) {
                         slidingWindow.remove(key);
                         timerMap.get(key).cancel();
                         timerMap.remove(key);
@@ -281,10 +282,10 @@ public class Sender {
 
         int lengthAndFlags = payload.length << 3;
         for (int flag: flags){
-            int flagBits = 1 << flag;               // SYN 2 -> 100, FYN 1 -> 10, ACK 0 -> 0
+            int flagBits = flag << 1;               // SYN 2 -> 100, FYN 1 -> 10, ACK 0 -> 0
             lengthAndFlags = lengthAndFlags | flagBits;
         }
-
+	System.out.println("Binary: " + Integer.toBinaryString(lengthAndFlags));
         byte[] lengthFlagsBytes = ByteBuffer.allocate(4).putInt(lengthAndFlags).array();
         byte[] zeros = new byte[2];
         short checkSum = 0;
@@ -325,7 +326,8 @@ public class Sender {
 
     /** Length of data portion (in bytes) */
     public int getLength(int n) {
-        return n >> 3;
+        System.out.println("n: " + n + "n>>3: " + (n>>3));
+	return n >> 3;
     }
 
     public int getFlag(int n, int k){       // -->         ->          -
@@ -482,11 +484,15 @@ public class Sender {
                             // output the packet just sent
                             output(ackPacket, true);
 
+			    updateAfterSend(ackPacket);
+
                         } else { // only a==1
                             // check sliding window hashmap has size 0 --> all acked
-                            if (finalPacket == true && slidingWindow.keySet().size() == 0) { // we received the ack from final packet
+                           	System.out.println("finalPacket: "+ finalPacket + " size: " + slidingWindow.keySet().size());
+			        if (finalPacket == true && slidingWindow.keySet().size() == 0) { // we received the ack from final packet
                                 try {
                                     flagBits.add(FIN);
+				    System.out.println("lastSent: "+ lastSent);
                                     byte[] finData = createPacket(lastSent + 1, new byte[0], flagBits);
                                     DatagramPacket finPacket = new DatagramPacket(finData, finData.length, InetAddress.getByName(remoteIP), receiverPort);
                                     senderSocket.send(finPacket);
@@ -546,7 +552,7 @@ public class Sender {
                                         senderSocket.send(udpPacket);
                                         setTimeOut(lastSent + 1, packet);
                                         output(packet, true);
-                                        updateAfterSend(data);
+                                        updateAfterSend(packet);
                                     }
                                 }
 
