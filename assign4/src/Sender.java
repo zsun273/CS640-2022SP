@@ -522,6 +522,7 @@ public class Sender {
         public void run() {
 
                 try {
+                    System.out.println("stopSend: " + stopSend + ", open: " + open + ", finalPacket: " + finalPacket);
                     while(stopSend == false) {
 
                         // wait for connection established
