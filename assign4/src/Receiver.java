@@ -160,6 +160,7 @@ public class Receiver {
                     if (s == 1 || f == 1) {
                         if (f == 1) {
                             flagBits.add(FIN);
+			    this.stopReceive = true;
                             fileWriter.close();
                         }
                         if (s == 1) {
@@ -174,8 +175,6 @@ public class Receiver {
 
                         // update variables after sending the packet
                         updateAfterSend(returnPacket);
-
-                        this.stopReceive = true;
                     }
                     else if (length > 0) {// if we receive data -> send back ack
                         if (open == true){

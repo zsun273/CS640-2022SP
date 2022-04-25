@@ -104,8 +104,7 @@ public class Sender {
         this.currAck = 0;
         this.lastAcked = -1;
         this.slidingWindow = new HashMap<>(sws); // assigning a size may not work here as hashmap can resize itself?
-        this.open = false;
-        this.stopSend = false;
+        
         // mtu - header: (seq number + ack + timestamp + length + flag + all zero + checksum)
         this.payloadsize = mtu - 24;
         this.dataTransfered = 0;
@@ -408,10 +407,11 @@ public class Sender {
 
     // not sure if correct
     private short computeCheckSum(byte[] packet) {
-        ByteBuffer bb = ByteBuffer.wrap(packet);
+        System.out.println("packet length: " + packet.length);
+	ByteBuffer bb = ByteBuffer.wrap(packet);
         bb.rewind();
         int accumulation = 0;
-        for (int i = 0; i < packet.length; i=i+2){
+        for (int i = 0; i < packet.length/2; i++){
             accumulation += 0xffff & bb.getShort();
         }
         // pad to an even number of shorts
@@ -522,11 +522,12 @@ public class Sender {
 
     public class SendThread extends Thread {
         public void run() {
-
+                System.out.println("stopSend: " + stopSend + " open: "+ open + " finalPacket: "+ finalPacket);
                 try {
                     while(stopSend == false) {
                                                           
                         // wait for connection established
+		        System.out.println("open: " + open + " finalPacket: "+ finalPacket);
                         if (open == true && finalPacket == false) { // send data
                             System.out.println("Sender: Sending thread sending......");
                             // determine how many bytes to send OR wait
@@ -571,6 +572,9 @@ public class Sender {
                                 }
                             }
                         }
+			else{
+				continue;
+			}
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
