@@ -101,6 +101,10 @@ public class Receiver {
                     int f = getFlag(lengthNFlags, FIN);
                     int a = getFlag(lengthNFlags, ACK);
 
+                    for(int i=0; i< incomingData.length ; i++) {
+                        System.out.print(incomingData[i] +" ");
+                    }
+
                     short originalChecksum = getCheckSum(incomingData);
                     // reset checksum to zero
                     ByteBuffer bb = ByteBuffer.wrap(incomingData);
