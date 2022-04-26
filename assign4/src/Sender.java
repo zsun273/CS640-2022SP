@@ -492,6 +492,7 @@ public class Sender {
                                     for(int i=0; i< finData.length ; i++) {
                                         System.out.print(finData[i] +" ");
                                     }
+				    System.out.println();
 
                                     DatagramPacket finPacket = new DatagramPacket(finData, finData.length, InetAddress.getByName(remoteIP), receiverPort);
                                     senderSocket.send(finPacket);

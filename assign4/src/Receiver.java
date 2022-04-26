@@ -102,10 +102,11 @@ public class Receiver {
                     int f = getFlag(lengthNFlags, FIN);
                     int a = getFlag(lengthNFlags, ACK);
 
-                    incomingData = Arrays.copyOfRange(incomingData, 0, length+24-1);
+                    incomingData = slicingByteArray(incomingData, 0, length+24);
                     for(int i=0; i< incomingData.length ; i++) {
                         System.out.print(incomingData[i] +" ");
                     }
+		    System.out.println();
 
                     short originalChecksum = getCheckSum(incomingData);
                     // reset checksum to zero
