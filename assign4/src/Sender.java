@@ -139,6 +139,7 @@ public class Sender {
             senderSocket.send(packet);
             //slidingWindow.put(sequenceNum, data);
             output(data, true);
+            setTimeOut(lastSent+1, data);
             updateAfterSend(data);
 
         } catch (Exception e) {
@@ -481,6 +482,8 @@ public class Sender {
 
                             // output the packet just sent
                             output(ackPacket, true);
+                            setTimeOut(lastSent+1, ackPacket);
+                            updateAfterSend(ackPacket);
 
                         } else { // only a==1
                             // check sliding window hashmap has size 0 --> all acked
@@ -499,6 +502,8 @@ public class Sender {
 
                                     // output packet sent
                                     output(finData, true);
+
+                                    setTimeOut(lastSent + 1, finData);
 
                                     // update variables after sent
                                     updateAfterSend(finData);
