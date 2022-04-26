@@ -93,11 +93,12 @@ public class Receiver {
 
                 while(stopReceive == false){
                     byte[] incomingData = new byte[mtu];
-		    DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
+		            DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
 		    // Receiving
                     System.out.println("Receiver: receiving date.....");
                     listenSocket.receive(incomingPacket);
 
+                    incomingData = new byte[](incomingPacket.getData(), 0, incomingPacket.getLength());
                     int lengthNFlags = getLengthNFlags(incomingData);
                     int length = getLength(lengthNFlags);
                     int s = getFlag(lengthNFlags, SYN);
@@ -105,10 +106,10 @@ public class Receiver {
                     int a = getFlag(lengthNFlags, ACK);
 
                     // incomingData = slicingByteArray(incomingData, 0, incomingPacket.getLength());
-                    for(int i=0; i< incomingData.length ; i++) {
-                        System.out.print(incomingData[i] +" ");
-                    }
-		    System.out.println();
+//                    for(int i=0; i< incomingData.length ; i++) {
+//                        System.out.print(incomingData[i] +" ");
+//                    }
+//		            System.out.println();
 
                     short originalChecksum = getCheckSum(incomingData);
                     // reset checksum to zero
@@ -237,6 +238,7 @@ public class Receiver {
 
                 try {
                     byte[] payload = getPayload(data);
+                    System.out.println("Datawritten: " + dataWritten + "Payload length:" + payload.length + "Length: " + length);
                     fileWriter.write(payload, dataWritten, length);
                     dataWritten += length;
                 } catch (IOException e) {

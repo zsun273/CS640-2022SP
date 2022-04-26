@@ -492,10 +492,10 @@ public class Sender {
                                     flagBits.add(FIN);
                                     byte[] finData = createPacket(lastSent + 1, new byte[0], flagBits);
 
-                                    for(int i=0; i< finData.length ; i++) {
-                                        System.out.print(finData[i] +" ");
-                                    }
-				    System.out.println();
+//                                    for(int i=0; i< finData.length ; i++) {
+//                                        System.out.print(finData[i] +" ");
+//                                    }
+//				                    System.out.println();
 
                                     DatagramPacket finPacket = new DatagramPacket(finData, finData.length, InetAddress.getByName(remoteIP), receiverPort);
                                     senderSocket.send(finPacket);
