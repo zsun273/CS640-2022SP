@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.Arrays;
 
 /**
  * Receiver Class
@@ -101,7 +102,7 @@ public class Receiver {
                     int f = getFlag(lengthNFlags, FIN);
                     int a = getFlag(lengthNFlags, ACK);
 
-                    incomingData = Arrays.copyOfRange(incomingData, 0, length+24);
+                    incomingData = Arrays.copyOfRange(incomingData, 0, length+24-1);
                     for(int i=0; i< incomingData.length ; i++) {
                         System.out.print(incomingData[i] +" ");
                     }
