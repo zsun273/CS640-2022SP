@@ -65,7 +65,7 @@ public class Sender {
     volatile boolean stopSend;
     volatile boolean finalPacket;
 
-    long ERTT = 0, EDEV = 0, T0 = 0, SRTT = 0, SDEV = 0;
+    private long ERTT = 0, EDEV = 0, T0 = 0, SRTT = 0, SDEV = 0;
 
     private volatile int dataTransfered;
     private volatile int numPacketsSent;
@@ -252,7 +252,7 @@ public class Sender {
         
         timerMap.put(seqNum, timer);
         timesMap.put(seqNum, times);
-        long time = timeout > 0 ? timeout : 1000;
+        long time = timeout > 0 ? timeout/Math.pow(10, 6) : 1000;
         System.out.println("Add " + seqNum + " a timeout " + time);
         timer.schedule(new TimeCheck(seqNum, packet), time);
     }
@@ -284,7 +284,7 @@ public class Sender {
     private byte[] createPacket(int sequenceNum, byte[] payload, ArrayList<Integer> flags) {
         byte[] sequenceNumBytes = ByteBuffer.allocate(4).putInt(sequenceNum).array();
         byte[] ackNumBytes = ByteBuffer.allocate(4).putInt(currAck).array();
-        byte[] timestampBytes = ByteBuffer.allocate(8).putLong(System.currentTimeMillis()).array();
+        byte[] timestampBytes = ByteBuffer.allocate(8).putLong(System.nanoTime()).array();
 
         int lengthAndFlags = payload.length << 3;
         for (int flag: flags){
@@ -429,12 +429,12 @@ public class Sender {
     private long timeOutCalculation(int sequenceNum, long timeStamp) {
         
         if (sequenceNum == 0){
-            ERTT = System.currentTimeMillis() - timeStamp;
+            ERTT = System.nanoTime() - timeStamp;
             System.out.println("ERTT: " + ERTT);
             EDEV = 0;
             T0 = 2*ERTT;
         } else {
-            SRTT = System.currentTimeMillis() - timeStamp;
+            SRTT = System.nanoTime() - timeStamp;
             System.out.println("SRTT: " + SRTT);
             SDEV = Math.abs(SRTT - ERTT);
             ERTT = (long) (0.875 * ERTT + (1-0.875) * SRTT);
