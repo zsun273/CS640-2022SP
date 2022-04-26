@@ -65,6 +65,8 @@ public class Sender {
     volatile boolean stopSend;
     volatile boolean finalPacket;
 
+    long ERTT = 0, EDEV = 0, T0 = 0, SRTT = 0, SDEV = 0;
+
     private volatile int dataTransfered;
     private volatile int numPacketsSent;
     private volatile int getNumRetransmission;
@@ -80,6 +82,7 @@ public class Sender {
         this.mtu = mtu;
         this.sws = sws;
         this.dupAckTimes = 0;
+        
         try {
             this.file = new File(filename);
             this.fileReader = new FileInputStream(this.file);
@@ -209,7 +212,8 @@ public class Sender {
                 lastAcked = getAckNum(data) - 1;
                 dupAckTimes = 0;
                 for (int key : slidingWindow.keySet()) { // remove acked data from buffer
-                    if (key <= receivedSeqNum) {
+                    if (key <= lastAcked) {
+                        System.out.println("remove " + key + " timer");
                         slidingWindow.remove(key);
                         timerMap.get(key).cancel();
                         timerMap.remove(key);
@@ -245,10 +249,11 @@ public class Sender {
         Timer preTimer = timerMap.get(seqNum);
         if (preTimer != null)
             preTimer.cancel();
-
+        
         timerMap.put(seqNum, timer);
         timesMap.put(seqNum, times);
-        long time = timeout > 0 ? timeout : 200;
+        long time = timeout > 0 ? timeout : 1000;
+        System.out.println("Add " + seqNum + " a timeout " + time);
         timer.schedule(new TimeCheck(seqNum, packet), time);
     }
 
@@ -279,7 +284,7 @@ public class Sender {
     private byte[] createPacket(int sequenceNum, byte[] payload, ArrayList<Integer> flags) {
         byte[] sequenceNumBytes = ByteBuffer.allocate(4).putInt(sequenceNum).array();
         byte[] ackNumBytes = ByteBuffer.allocate(4).putInt(currAck).array();
-        byte[] timestampBytes = ByteBuffer.allocate(8).putLong(System.nanoTime()).array();
+        byte[] timestampBytes = ByteBuffer.allocate(8).putLong(System.currentTimeMillis()).array();
 
         int lengthAndFlags = payload.length << 3;
         for (int flag: flags){
@@ -422,13 +427,15 @@ public class Sender {
 
     /** Return timeout in nanoseconds */
     private long timeOutCalculation(int sequenceNum, long timeStamp) {
-        long ERTT = 0, EDEV = 0, T0, SRTT = 0, SDEV;
+        
         if (sequenceNum == 0){
-            ERTT = System.nanoTime() - timeStamp;
+            ERTT = System.currentTimeMillis() - timeStamp;
+            System.out.println("ERTT: " + ERTT);
             EDEV = 0;
             T0 = 2*ERTT;
         } else {
-            SRTT = System.nanoTime() - timeStamp;
+            SRTT = System.currentTimeMillis() - timeStamp;
+            System.out.println("SRTT: " + SRTT);
             SDEV = Math.abs(SRTT - ERTT);
             ERTT = (long) (0.875 * ERTT + (1-0.875) * SRTT);
             EDEV = (long) (0.75*EDEV + (1-0.75) * SDEV);
@@ -446,7 +453,7 @@ public class Sender {
                 try {
 
                     while (stopSend == false) {
-                        System.out.println("Sender: Receiving thread receiving......");
+                        //System.out.println("Sender: Receiving thread receiving......");
                         senderSocket.receive(incomingPacket);
 
                         int lengthNFlags = getLengthNFlags(incomingData);
@@ -475,6 +482,9 @@ public class Sender {
                         // update variables after receiving this packet
                         updateAfterReceive(incomingData);
 
+                        for (int key: slidingWindow.keySet())
+                            System.out.println("key: " + key);
+
                         ArrayList<Integer> flagBits = new ArrayList<>();
                         if (s == 1 || f == 1) { // receive a SYN or FIN from receiver
                             flagBits.add(ACK);
@@ -483,7 +493,11 @@ public class Sender {
 
                             // output the packet just sent
                             output(ackPacket, true);
-                            setTimeOut(lastSent+1, ackPacket);
+                            if (!stopSend) {
+                                setTimeOut(lastSent+1, ackPacket);
+}
+                            System.out.println("sw size: " + slidingWindow.keySet().size());
+                            System.out.println("stop? " + stopSend);
                             updateAfterSend(ackPacket);
 
                         } else { // only a==1
@@ -534,7 +548,8 @@ public class Sender {
                         while (stopSend == false) {
 
                             // wait for connection established
-                            // System.out.println("open: " + open + " finalPacket: " + finalPacket);
+//System.out.println("send stop: " + stopSend);
+                            //System.out.println("open: " + open + " finalPacket: " + finalPacket);
                             if (open == true && finalPacket == false) { // send data
                                 // System.out.println("Sender: Sending thread sending......");
                                 // determine how many bytes to send OR wait
@@ -561,7 +576,6 @@ public class Sender {
                                         updateAfterSend(packet);
                                     }
                                 }
-
 
                                 // print stats for debugging
                                 // System.out.println("remain: " + remainingBytes + ", swCapacity: " + swCapacity);
