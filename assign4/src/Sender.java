@@ -535,7 +535,7 @@ public class Sender {
                             // wait for connection established
                             // System.out.println("open: " + open + " finalPacket: " + finalPacket);
                             if (open == true && finalPacket == false) { // send data
-                                System.out.println("Sender: Sending thread sending......");
+                                // System.out.println("Sender: Sending thread sending......");
                                 // determine how many bytes to send OR wait
                                 long remainingBytes = file.length() - 1 - lastSent;
                                 int swCapacity = sws - (lastSent - lastAcked);
@@ -563,7 +563,7 @@ public class Sender {
 
 
                                 // print stats for debugging
-                                System.out.println("remain: " + remainingBytes + ", swCapacity: " + swCapacity);
+                                // System.out.println("remain: " + remainingBytes + ", swCapacity: " + swCapacity);
 
 
                             }
