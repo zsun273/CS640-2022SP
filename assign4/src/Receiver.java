@@ -98,7 +98,6 @@ public class Receiver {
                     System.out.println("Receiver: receiving date.....");
                     listenSocket.receive(incomingPacket);
 
-                    incomingData = new byte[](incomingPacket.getData(), 0, incomingPacket.getLength());
                     int lengthNFlags = getLengthNFlags(incomingData);
                     int length = getLength(lengthNFlags);
                     int s = getFlag(lengthNFlags, SYN);
@@ -239,7 +238,7 @@ public class Receiver {
                 try {
                     byte[] payload = getPayload(data);
                     System.out.println("Datawritten: " + dataWritten + "Payload length:" + payload.length + "Length: " + length);
-                    fileWriter.write(payload, dataWritten, length);
+                    fileWriter.write(payload, 0, length);
                     dataWritten += length;
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -364,6 +363,17 @@ public class Receiver {
     }
 
     public byte[] getPayload(byte[] packet) {
+//        int end = packet.length;
+//        for(int i = packet.length-1; i >=24; i--){
+//            if (packet[i] == (byte)0){
+//                continue;
+//            }
+//            else{
+//                end = i;
+//                break;
+//            }
+//        }
+//        return slicingByteArray(packet, 24, end+1);
         return slicingByteArray(packet, 24, packet.length);
     }
 
