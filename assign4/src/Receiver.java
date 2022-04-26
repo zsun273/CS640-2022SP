@@ -88,11 +88,13 @@ public class Receiver {
             this.listenSocket = new DatagramSocket(receiverPort);
             System.out.println("Receiver socket successfully bind to port: " + receiverPort);
             try {
-                byte[] incomingData = new byte[mtu];
-                DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
+                //byte[] incomingData = new byte[mtu];
+                //DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
 
                 while(stopReceive == false){
-                    // Receiving
+                    byte[] incomingData = new byte[mtu];
+		    DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
+		    // Receiving
                     System.out.println("Receiver: receiving date.....");
                     listenSocket.receive(incomingPacket);
 
@@ -102,7 +104,7 @@ public class Receiver {
                     int f = getFlag(lengthNFlags, FIN);
                     int a = getFlag(lengthNFlags, ACK);
 
-                    incomingData = slicingByteArray(incomingData, 0, length+24);
+                    // incomingData = slicingByteArray(incomingData, 0, incomingPacket.getLength());
                     for(int i=0; i< incomingData.length ; i++) {
                         System.out.print(incomingData[i] +" ");
                     }

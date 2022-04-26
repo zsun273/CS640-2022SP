@@ -552,7 +552,7 @@ public class Sender {
                                         senderSocket.send(udpPacket);
                                         setTimeOut(lastSent + 1, packet);
                                         output(packet, true);
-                                        updateAfterSend(data);
+                                        updateAfterSend(packet);
                                     }
                                 }
 
