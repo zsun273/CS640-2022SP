@@ -62,7 +62,7 @@ public class Receiver {
         System.out.println("Receiver: receiver port = " + receiverPort);
 
         this.sequenceNum = 0;
-	this.nextSeqNum = 0;
+	    this.nextSeqNum = 0;
         this.receiverACK = 0;
         this.open = false;
         this.stopReceive = false;
@@ -101,6 +101,7 @@ public class Receiver {
                     int f = getFlag(lengthNFlags, FIN);
                     int a = getFlag(lengthNFlags, ACK);
 
+                    incomingData = Arrays.copyOfRange(incomingData, 0, length+24);
                     for(int i=0; i< incomingData.length ; i++) {
                         System.out.print(incomingData[i] +" ");
                     }
