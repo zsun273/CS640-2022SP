@@ -248,7 +248,8 @@ public class Sender {
 
         timerMap.put(seqNum, timer);
         timesMap.put(seqNum, times);
-        timer.schedule(new TimeCheck(seqNum, packet), timeout);
+        long time = timeout > 0 ? timeout : 200;
+        timer.schedule(new TimeCheck(seqNum, packet), time);
     }
 
     class TimeCheck extends TimerTask {
