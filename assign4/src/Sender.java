@@ -443,6 +443,20 @@ public class Sender {
         return T0;
     }
 
+    private void waitClose() {
+        System.out.println("final time out starts");
+        Timer finTimer = new Timer();
+        TimerTask fin = new TimerTask() {
+            @Override
+            public synchronized void run() {
+                open = false;
+                stopSend = true;
+                System.out.println("Connection terminated. Open is False. Stop Sending");
+            }
+        };
+        finTimer.schedule(fin, 16*timeout/1000000);
+    }
+
     public class ReceiveThread extends Thread {
         public void run(){
             try {
@@ -487,17 +501,19 @@ public class Sender {
                         ArrayList<Integer> flagBits = new ArrayList<>();
                         if (s == 1 || f == 1) { // receive a SYN or FIN from receiver
                             if (f == 1) {
-                                System.out.println("final time out starts");
-                                Timer finTimer = new Timer();
-                                TimerTask fin = new TimerTask() {
-                                    @Override
-                                    public synchronized void run() {
-                                        open = false;
-                                        stopSend = true;
-                                        System.out.println("Connection terminated. Open is False. Stop Sending");
-                                    }
-                                };
-                                finTimer.schedule(fin, 16*timeout/1000000);
+                               // waitClose();
+                                synchronized ((Object)stopSend) {
+                                    Timer finTimer = new Timer();
+                                    TimerTask fin = new TimerTask() {
+                                        @Override
+                                        public synchronized void run() {
+                                            open = false;
+                                            stopSend = true;
+                                            System.out.println("Connection terminated. Open is False. Stop Sending");
+                                        }
+                                    };
+                                    finTimer.schedule(fin, 16*timeout/1000000);
+                                }
                             }
                             flagBits.add(ACK);
                             byte[] ackPacket = createPacket(lastSent + 1, new byte[0], flagBits);
