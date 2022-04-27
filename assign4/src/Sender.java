@@ -9,23 +9,6 @@ import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.util.*;
 
-static class MyBoolean {
-
-    private boolean value;
-
-    MyBoolean(final boolean value) {
-        this.value = value;
-    }
-
-    boolean getValue() {
-        return value;
-    }
-
-    void setValue(final boolean value) {
-        this.value = value;
-    }
-}
-
 /*
     Sender class
 
@@ -40,6 +23,24 @@ static class MyBoolean {
     2): update rtt (timeout) according to acked packet time
  */
 public class Sender {
+    
+    static class MyBoolean {
+
+    private boolean value;
+
+    MyBoolean(final boolean value) {
+        this.value = value;
+    }
+
+    boolean getValue() {
+        return value;
+    }
+
+    void setValue(final boolean value) {
+        this.value = value;
+    }
+    }
+
     private DatagramSocket senderSocket;
     private int senderPort;
     private String remoteIP;
@@ -519,7 +520,7 @@ public class Sender {
                                         open.setValue(false);
                                         //stopSend = true;
                                         stopSend.setValue(true);
-                                        System.out.println("Connection terminated. Open is False. Stop Sending");
+                                        System.out.println("StopSend Change to: " + stopSend.getValue());
                                     }
                                 };
                                 finTimer.schedule(fin, 16*timeout/1000000);
@@ -533,8 +534,8 @@ public class Sender {
 //                            if (!stopSend) {
 //                                setTimeOut(lastSent+1, ackPacket);
 //                            }
-                            System.out.println("sw size: " + slidingWindow.keySet().size());
-                            System.out.println("stop? " + stopSend.getValue());
+                            // System.out.println("sw size: " + slidingWindow.keySet().size());
+                            // System.out.println("stop? " + stopSend.getValue());
                             updateAfterSend(ackPacket);
 
                         } else { // only a==1
