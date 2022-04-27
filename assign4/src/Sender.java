@@ -9,6 +9,23 @@ import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.util.*;
 
+static class MyBoolean {
+
+    private boolean value;
+
+    MyBoolean(final boolean value) {
+        this.value = value;
+    }
+
+    boolean getValue() {
+        return value;
+    }
+
+    void setValue(final boolean value) {
+        this.value = value;
+    }
+}
+
 /*
     Sender class
 
@@ -23,11 +40,6 @@ import java.util.*;
     2): update rtt (timeout) according to acked packet time
  */
 public class Sender {
-    class Control {
-        public volatile boolean stopSend;
-    }
-
-    final Control control = new Control();
     private DatagramSocket senderSocket;
     private int senderPort;
     private String remoteIP;
@@ -66,9 +78,14 @@ public class Sender {
     private HashMap<Integer, Timer> timerMap; // map stores packet -> a timer corresponds to it
     private HashMap<Integer, Integer> timesMap; // map stores packet -> send times
     private int payloadsize;
-    volatile boolean open;
-    private Boolean stopSend;
-    volatile boolean finalPacket;
+
+    public volatile MyBoolean open = new MyBoolean(false);
+    public volatile MyBoolean stopSend = new MyBoolean(false);
+    public volatile MyBoolean finalPacket = new MyBoolean(false);
+
+//    public volatile boolean open;
+//    public volatile boolean stopSend;
+//    public volatile boolean finalPacket;
 
     private long ERTT = 0, EDEV = 0, T0 = 0, SRTT = 0, SDEV = 0;
 
@@ -94,10 +111,9 @@ public class Sender {
         } catch (Exception e) {
             e.printStackTrace();
         }
-	    this.open = false;
-	    this.stopSend = false;
-	    this.control.stopSend = false;
-	    this.finalPacket = false;
+//	    this.open = false;
+//	    this.stopSend = false;
+//	    this.finalPacket = false;
 
         this.startTime = System.nanoTime();
         this.timeout = 0;
@@ -233,7 +249,8 @@ public class Sender {
 
         }
         if (s == 1){
-            open = true;
+            //open = true;
+            open.setValue(true);
             System.out.println("Connection established. Open is True");
         }
         if (f == 1){
@@ -449,20 +466,6 @@ public class Sender {
         return T0;
     }
 
-    private void waitClose() {
-        System.out.println("final time out starts");
-        Timer finTimer = new Timer();
-        TimerTask fin = new TimerTask() {
-            @Override
-            public synchronized void run() {
-                open = false;
-                stopSend = true;
-                System.out.println("Connection terminated. Open is False. Stop Sending");
-            }
-        };
-        finTimer.schedule(fin, 16*timeout/1000000);
-    }
-
     public class ReceiveThread extends Thread {
         public void run(){
             try {
@@ -470,104 +473,100 @@ public class Sender {
                 DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
 
                 try {
-                    //synchronized (stopSend) {
-                        while (control.stopSend == false) {
-                            System.out.println("Sender: Receiving thread receiving......");
-                            senderSocket.receive(incomingPacket);
 
-                            int lengthNFlags = getLengthNFlags(incomingData);
-                            int length = getLength(lengthNFlags);
-                            int s = getFlag(lengthNFlags, SYN);
-                            int f = getFlag(lengthNFlags, FIN);
-                            int a = getFlag(lengthNFlags, ACK);
+                    while (stopSend.getValue() == false) {
+                        System.out.println("Sender: Receiving thread receiving......");
+                        senderSocket.receive(incomingPacket);
 
-                            // TODO: check if checksum is correct
-                            short originalChecksum = getCheckSum(incomingData);
-                            // reset checksum to zero
-                            ByteBuffer bb = ByteBuffer.wrap(incomingData);
-                            bb.putShort(22, (short) 0);
-                            // compute current checksum
-                            short currChecksum = computeCheckSum(incomingData);
-                            if (currChecksum != originalChecksum) {
-                                System.out.println("Check sum failed! Data Corrupted!");
-                                // drop the packet
-                                continue;
+                        int lengthNFlags = getLengthNFlags(incomingData);
+                        int length = getLength(lengthNFlags);
+                        int s = getFlag(lengthNFlags, SYN);
+                        int f = getFlag(lengthNFlags, FIN);
+                        int a = getFlag(lengthNFlags, ACK);
+
+                        // TODO: check if checksum is correct
+                        short originalChecksum = getCheckSum(incomingData);
+                        // reset checksum to zero
+                        ByteBuffer bb = ByteBuffer.wrap(incomingData);
+                        bb.putShort(22, (short) 0);
+                        // compute current checksum
+                        short currChecksum = computeCheckSum(incomingData);
+                        if (currChecksum != originalChecksum) {
+                            System.out.println("Check sum failed! Data Corrupted!");
+                            // drop the packet
+                            continue;
+                        }
+
+                        // check complete, handle incoming packet
+                        // print out received packet
+                        output(incomingData, false);
+
+                        // update variables after receiving this packet
+                        updateAfterReceive(incomingData);
+
+                        for (int key: slidingWindow.keySet())
+                            System.out.println("key: " + key);
+
+                        ArrayList<Integer> flagBits = new ArrayList<>();
+                        if (s == 1 || f == 1) { // receive a SYN or FIN from receiver
+                            if (f == 1) {
+                                System.out.println("final time out starts");
+                                Timer finTimer = new Timer();
+                                TimerTask fin = new TimerTask() {
+                                    @Override
+                                    public synchronized void run() {
+                                        //open = false;
+                                        open.setValue(false);
+                                        //stopSend = true;
+                                        stopSend.setValue(true);
+                                        System.out.println("Connection terminated. Open is False. Stop Sending");
+                                    }
+                                };
+                                finTimer.schedule(fin, 16*timeout/1000000);
                             }
+                            flagBits.add(ACK);
+                            byte[] ackPacket = createPacket(lastSent + 1, new byte[0], flagBits);
+                            senderSocket.send(new DatagramPacket(ackPacket, ackPacket.length, InetAddress.getByName(remoteIP), receiverPort));
 
-                            // check complete, handle incoming packet
-                            // print out received packet
-                            output(incomingData, false);
-
-                            // update variables after receiving this packet
-                            updateAfterReceive(incomingData);
-
-                            for (int key: slidingWindow.keySet())
-                                System.out.println("key: " + key);
-
-                            ArrayList<Integer> flagBits = new ArrayList<>();
-                            if (s == 1 || f == 1) { // receive a SYN or FIN from receiver
-                                if (f == 1) {
-                                    //waitClose();
-
-                                        Timer finTimer = new Timer();
-                                        TimerTask fin = new TimerTask() {
-                                            @Override
-                                            public void run() {
-                                                //synchronized (stopSend) {
-                                                    open = false;
-                                                    control.stopSend = true;
-                                                    System.out.println("Connection terminated. Open is False. Stop Sending");
-                                                //}
-                                            }
-                                        };
-                                        finTimer.schedule(fin, 16*timeout/1000000);
-
-                                }
-                                flagBits.add(ACK);
-                                byte[] ackPacket = createPacket(lastSent + 1, new byte[0], flagBits);
-                                senderSocket.send(new DatagramPacket(ackPacket, ackPacket.length, InetAddress.getByName(remoteIP), receiverPort));
-
-                                // output the packet just sent
-                                output(ackPacket, true);
+                            // output the packet just sent
+                            output(ackPacket, true);
 //                            if (!stopSend) {
 //                                setTimeOut(lastSent+1, ackPacket);
 //                            }
-                                System.out.println("sw size: " + slidingWindow.keySet().size());
-                                System.out.println("stop? " + stopSend);
-                                updateAfterSend(ackPacket);
+                            System.out.println("sw size: " + slidingWindow.keySet().size());
+                            System.out.println("stop? " + stopSend.getValue());
+                            updateAfterSend(ackPacket);
 
-                            } else { // only a==1
-                                // check sliding window hashmap has size 0 --> all acked
-                                if (finalPacket == true && slidingWindow.keySet().size() == 0) { // we received the ack from final packet
-                                    try {
-                                        flagBits.add(FIN);
-                                        byte[] finData = createPacket(lastSent + 1, new byte[0], flagBits);
+                        } else { // only a==1
+                            // check sliding window hashmap has size 0 --> all acked
+                            if (finalPacket.getValue() == true && slidingWindow.keySet().size() == 0) { // we received the ack from final packet
+                                try {
+                                    flagBits.add(FIN);
+                                    byte[] finData = createPacket(lastSent + 1, new byte[0], flagBits);
 
 //                                    for(int i=0; i< finData.length ; i++) {
 //                                        System.out.print(finData[i] +" ");
 //                                    }
 //				                    System.out.println();
 
-                                        DatagramPacket finPacket = new DatagramPacket(finData, finData.length, InetAddress.getByName(remoteIP), receiverPort);
-                                        senderSocket.send(finPacket);
+                                    DatagramPacket finPacket = new DatagramPacket(finData, finData.length, InetAddress.getByName(remoteIP), receiverPort);
+                                    senderSocket.send(finPacket);
 
-                                        // output packet sent
-                                        output(finData, true);
+                                    // output packet sent
+                                    output(finData, true);
 
-                                        setTimeOut(lastSent + 1, finData);
+                                    setTimeOut(lastSent + 1, finData);
 
-                                        // update variables after sent
-                                        updateAfterSend(finData);
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
-                                    }
+                                    // update variables after sent
+                                    updateAfterSend(finData);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
                                 }
-
                             }
 
                         }
-                    //}
 
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -582,47 +581,48 @@ public class Sender {
         public void run() {
                 //System.out.println("stopSend: " + stopSend + " open: "+ open + " finalPacket: "+ finalPacket);
                 try {
-                        //synchronized (stopSend) {
-                            while (control.stopSend ==  false) {
 
-                                // wait for connection established
-                                // System.out.println("send stop: " + stopSend);
-                                //System.out.println("open: " + open + " finalPacket: " + finalPacket);
-                                if (open == true && finalPacket == false) { // send data
-                                    System.out.println("Sender: Sending thread sending......");
-                                    // determine how many bytes to send OR wait
-                                    long remainingBytes = file.length() - 1 - lastSent;
-                                    int swCapacity = sws - (lastSent - lastAcked);
+                        while (stopSend.getValue() == false) {
 
-                                    // data can be sent would be the min(remaining, swCapacity, mtu)
-                                    int sentSize = Math.min((int) remainingBytes, swCapacity);
-                                    sentSize = Math.min(sentSize, mtu);
-                                    if (sentSize > 0) {
-                                        if (sentSize == remainingBytes)
-                                            finalPacket = true;
+                            // wait for connection established
+                            // System.out.println("send stop: " + stopSend);
+                            //System.out.println("open: " + open + " finalPacket: " + finalPacket);
+                            if (open.getValue() == true && finalPacket.getValue() == false) { // send data
+                                System.out.println("Sender: Sending thread sending......");
+                                // determine how many bytes to send OR wait
+                                long remainingBytes = file.length() - 1 - lastSent;
+                                int swCapacity = sws - (lastSent - lastAcked);
 
-                                        byte[] data = new byte[sentSize];
-                                        if (fileReader.read(data) != -1) {
-                                            ArrayList<Integer> flagBits = new ArrayList<>();
-                                            flagBits.add(ACK);
-                                            byte[] packet = createPacket(lastSent + 1, data, flagBits);
-
-                                            DatagramPacket udpPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(remoteIP), receiverPort);
-                                            senderSocket.send(udpPacket);
-                                            setTimeOut(lastSent + 1, packet);
-                                            output(packet, true);
-                                            updateAfterSend(packet);
-                                        }
+                                // data can be sent would be the min(remaining, swCapacity, mtu)
+                                int sentSize = Math.min((int) remainingBytes, swCapacity);
+                                sentSize = Math.min(sentSize, mtu);
+                                if (sentSize > 0) {
+                                    if (sentSize == remainingBytes){
+                                        //finalPacket = true;
+                                        finalPacket.setValue(true);
                                     }
 
-                                    // print stats for debugging
-                                    // System.out.println("remain: " + remainingBytes + ", swCapacity: " + swCapacity);
 
+                                    byte[] data = new byte[sentSize];
+                                    if (fileReader.read(data) != -1) {
+                                        ArrayList<Integer> flagBits = new ArrayList<>();
+                                        flagBits.add(ACK);
+                                        byte[] packet = createPacket(lastSent + 1, data, flagBits);
 
+                                        DatagramPacket udpPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(remoteIP), receiverPort);
+                                        senderSocket.send(udpPacket);
+                                        setTimeOut(lastSent + 1, packet);
+                                        output(packet, true);
+                                        updateAfterSend(packet);
+                                    }
                                 }
-                            }
-                        //}
 
+                                // print stats for debugging
+                                // System.out.println("remain: " + remainingBytes + ", swCapacity: " + swCapacity);
+
+
+                            }
+                        }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
