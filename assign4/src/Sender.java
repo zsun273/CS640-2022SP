@@ -75,6 +75,7 @@ public class Sender {
     private static final int NUM_RETRANSMISSION = 16;
 
     private HashMap<Integer, byte[]> slidingWindow; // packets in sliding window are sent but unacked packets
+    private HashMap<Integer, ArrayList<Integer>> flagWindow; // parallel to slidingwindow, stores flagbits of packets
     private long timeout;  // timeout, update after each packet received
     private HashMap<Integer, Timer> timerMap; // map stores packet -> a timer corresponds to it
     private HashMap<Integer, Integer> timesMap; // map stores packet -> send times
@@ -124,6 +125,7 @@ public class Sender {
         this.currAck = 0;
         this.lastAcked = -1;
         this.slidingWindow = new HashMap<>(sws); // assigning a size may not work here as hashmap can resize itself?
+        this.flagWindow = new HashMap<>();
         
         // mtu - header: (seq number + ack + timestamp + length + flag + all zero + checksum)
         this.payloadsize = mtu - 24;
@@ -217,7 +219,9 @@ public class Sender {
                 numDupAcks ++;
                 if (dupAckTimes >= 3) {
                     for (int key : slidingWindow.keySet()) {
-                        byte[] packet = slidingWindow.get(key);
+                        byte[] payload = slidingWindow.get(key);
+                        ArrayList<Integer> flags = flagWindow.get(key);
+                        byte[] packet = createPacket(key, payload, flags);
                         try {
                             DatagramPacket udpPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(remoteIP), receiverPort);
                             senderSocket.send(udpPacket);
@@ -237,6 +241,7 @@ public class Sender {
                     if (key <= lastAcked) {
                         System.out.println("remove " + key + " timer");
                         slidingWindow.remove(key);
+                        flagWindow.remove(key);
                         timerMap.get(key).cancel();
                         timerMap.remove(key);
                         timesMap.remove(key);
@@ -291,14 +296,7 @@ public class Sender {
 
         public void run() { // resend package if timeout
             try {
-                ArrayList<Integer> flags = new ArrayList<>();
-                int lengthNFlags = getLengthNFlags(packet);
-                if (getFlag(lengthNFlags, SYN) == 1)
-                    flags.add(SYN);
-                if(getFlag(lengthNFlags, FIN) == 1)
-                    flags.add(FIN);
-                if (getFlag(lengthNFlags, ACK) == 1)
-                    flags.add(ACK);
+                ArrayList<Integer> flags = flagWindow.get(seqNum);
 
                 byte[] data = createPacket(seqNum, slidingWindow.get(seqNum), flags);
 
@@ -342,6 +340,7 @@ public class Sender {
         packet.put(payload);
 
         slidingWindow.put(sequenceNum, payload);
+        flagWindow.put(sequenceNum, flags);
 
         if (checkSum == 0){
             checkSum = computeCheckSum(packet.array());
