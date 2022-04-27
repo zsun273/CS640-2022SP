@@ -507,11 +507,11 @@ public class Sender {
                                         TimerTask fin = new TimerTask() {
                                             @Override
                                             public void run() {
-                                                synchronized (stopSend) {
+                                                //synchronized (stopSend) {
                                                     open = false;
                                                     stopSend = true;
                                                     System.out.println("Connection terminated. Open is False. Stop Sending");
-                                                }
+                                                //}
                                             }
                                         };
                                         finTimer.schedule(fin, 16*timeout/1000000);
