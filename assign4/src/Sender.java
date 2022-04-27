@@ -464,7 +464,7 @@ public class Sender {
                 DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
 
                 try {
-                    synchronized (stopSend) {
+                    //synchronized (stopSend) {
                         while (stopSend == false) {
                             System.out.println("Sender: Receiving thread receiving......");
                             senderSocket.receive(incomingPacket);
@@ -507,9 +507,11 @@ public class Sender {
                                         TimerTask fin = new TimerTask() {
                                             @Override
                                             public void run() {
-                                                open = false;
-                                                stopSend = true;
-                                                System.out.println("Connection terminated. Open is False. Stop Sending");
+                                                synchronized (stopSend) {
+                                                    open = false;
+                                                    stopSend = true;
+                                                    System.out.println("Connection terminated. Open is False. Stop Sending");
+                                                }
                                             }
                                         };
                                         finTimer.schedule(fin, 16*timeout/1000000);
@@ -558,7 +560,7 @@ public class Sender {
                             }
 
                         }
-                    }
+                    //}
 
                 } catch (IOException e) {
                     e.printStackTrace();
