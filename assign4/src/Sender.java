@@ -232,7 +232,7 @@ public class Sender {
         }
         if (f == 1){
             open = false;
-            stopSend = true;
+            //stopSend = true;
             System.out.println("Connection terminated. Open is False. Stop Sending");
         }
     }
@@ -486,15 +486,25 @@ public class Sender {
 
                         ArrayList<Integer> flagBits = new ArrayList<>();
                         if (s == 1 || f == 1) { // receive a SYN or FIN from receiver
+                            if (f == 1) {
+                                Timer finTimer = new Timer();
+                                TimerTask fin = new TimerTask() {
+                                    @Override
+                                    public void run() {
+                                        stopSend = true;
+                                    }
+                                };
+                                finTimer.schedule(fin, 16*timeout);
+                            }
                             flagBits.add(ACK);
                             byte[] ackPacket = createPacket(lastSent + 1, new byte[0], flagBits);
                             senderSocket.send(new DatagramPacket(ackPacket, ackPacket.length, InetAddress.getByName(remoteIP), receiverPort));
 
                             // output the packet just sent
                             output(ackPacket, true);
-                            if (!stopSend) {
-                                setTimeOut(lastSent+1, ackPacket);
-}
+//                            if (!stopSend) {
+//                                setTimeOut(lastSent+1, ackPacket);
+//                            }
                             System.out.println("sw size: " + slidingWindow.keySet().size());
                             System.out.println("stop? " + stopSend);
                             updateAfterSend(ackPacket);

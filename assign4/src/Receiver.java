@@ -59,6 +59,7 @@ public class Receiver {
         this.mtu = mtu;
         this.sws = sws;
         this.filename = filename;
+        this.timer = new Timer();
 
         System.out.println("Receiver: receiver port = " + receiverPort);
 
@@ -185,6 +186,9 @@ public class Receiver {
                         byte[] returnPacket = createPacket(nextSeqNum, new byte[0], flagBits, getTimeStamp(incomingData));
                         listenSocket.send(new DatagramPacket(returnPacket, returnPacket.length, senderAddr, senderPort));
 
+                        if (f == 1)
+                            setTimeout(returnPacket, senderAddr, senderPort);
+
                         // print out the sent packet
                         output(returnPacket, true);
 
@@ -229,15 +233,18 @@ public class Receiver {
 
     }
 
-    private void setTimeout() {
-        Timer timer = new Timer();
+    private void setTimeout(byte[] returnPacket, InetAddress senderAddr, int senderPort) { // resend FIN/ACK every 500ms until ack received
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                stopReceive = true;
+                try {
+                    listenSocket.send(new DatagramPacket(returnPacket, returnPacket.length, senderAddr, senderPort));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         };
-        timer.schedule(task, 10000);
+        timer.schedule(task, 500 ,500);
     }
 
 
@@ -281,8 +288,11 @@ public class Receiver {
                 receiverACK = receivedSeqNum + 1;
             }
         } else if (a == 1) {
-            if (getAckNum(data) == 2)
+            if (getAckNum(data) == 2) {
+                timer.cancel();
                 stopReceive = true;
+            }
+
         }
 
     }
