@@ -291,7 +291,18 @@ public class Sender {
 
         public void run() { // resend package if timeout
             try {
-                DatagramPacket udpPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(remoteIP), receiverPort);
+                ArrayList<Integer> flags = new ArrayList<>();
+                int lengthNFlags = getLengthNFlags(packet);
+                if (getFlag(lengthNFlags, SYN) == 1)
+                    flags.add(SYN);
+                if(getFlag(lengthNFlags, FIN) == 1)
+                    flags.add(FIN);
+                if (getFlag(lengthNFlags, ACK) == 1)
+                    flags.add(ACK);
+
+                byte[] data = createPacket(seqNum, slidingWindow.get(seqNum), flags);
+
+                DatagramPacket udpPacket = new DatagramPacket(data, data.length, InetAddress.getByName(remoteIP), receiverPort);
                 senderSocket.send(udpPacket);
 
                 setTimeOut(getSequenceNum(packet), packet); // put a new timer after this
@@ -330,7 +341,7 @@ public class Sender {
         packet.put(checkSumBytes);
         packet.put(payload);
 
-        slidingWindow.put(sequenceNum, packet.array());
+        slidingWindow.put(sequenceNum, payload);
 
         if (checkSum == 0){
             checkSum = computeCheckSum(packet.array());
