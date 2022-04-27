@@ -112,9 +112,9 @@ public class Sender {
         } catch (Exception e) {
             e.printStackTrace();
         }
-//	    this.open = false;
-//	    this.stopSend = false;
-//	    this.finalPacket = false;
+	    //this.open = false;
+	    //this.stopSend = false;
+	    //this.finalPacket = false;
 
         this.startTime = System.nanoTime();
         this.timeout = 0;
@@ -157,7 +157,6 @@ public class Sender {
         try {
             // three-way handshake initialization
             // send first SYN here from sender
-            // TODO: do we need to make sure only one thread is sending (using lock?)
             ArrayList<Integer> flagBits = new ArrayList<>();
             flagBits.add(SYN);
             byte[] data = createPacket(lastSent+1, new byte[0], flagBits);
@@ -266,6 +265,7 @@ public class Sender {
         int times = timesMap.getOrDefault(seqNum, 0) + 1;
         if (times > NUM_RETRANSMISSION) { // need to halt the process, but how?
             System.out.println("Maximum transmission times of a single packet is reached. Transmission failed!!!");
+            System.exit(0);
         }
         Timer timer = new Timer();
 
@@ -432,7 +432,7 @@ public class Sender {
     // not sure if correct
     private short computeCheckSum(byte[] packet) {
         System.out.println("packet length: " + packet.length);
-	ByteBuffer bb = ByteBuffer.wrap(packet);
+	    ByteBuffer bb = ByteBuffer.wrap(packet);
         bb.rewind();
         int accumulation = 0;
         for (int i = 0; i < packet.length/2; i++){
@@ -453,12 +453,12 @@ public class Sender {
         
         if (sequenceNum == 0){
             ERTT = System.nanoTime() - timeStamp;
-            System.out.println("ERTT: " + ERTT);
+            System.out.println("ERTT: " + ERTT/1000000);
             EDEV = 0;
             T0 = 2*ERTT;
         } else {
             SRTT = System.nanoTime() - timeStamp;
-            System.out.println("SRTT: " + SRTT);
+            System.out.println("SRTT: " + SRTT/1000000);
             SDEV = Math.abs(SRTT - ERTT);
             ERTT = (long) (0.875 * ERTT + (1-0.875) * SRTT);
             EDEV = (long) (0.75*EDEV + (1-0.75) * SDEV);
@@ -476,7 +476,7 @@ public class Sender {
                 try {
 
                     while (stopSend.getValue() == false) {
-                        System.out.println("Sender: Receiving thread receiving......");
+                        // System.out.println("Sender: Receiving thread receiving......");
                         senderSocket.receive(incomingPacket);
 
                         int lengthNFlags = getLengthNFlags(incomingData);
@@ -485,7 +485,7 @@ public class Sender {
                         int f = getFlag(lengthNFlags, FIN);
                         int a = getFlag(lengthNFlags, ACK);
 
-                        // TODO: check if checksum is correct
+                        // check if checksum is correct
                         short originalChecksum = getCheckSum(incomingData);
                         // reset checksum to zero
                         ByteBuffer bb = ByteBuffer.wrap(incomingData);
@@ -505,8 +505,8 @@ public class Sender {
                         // update variables after receiving this packet
                         updateAfterReceive(incomingData);
 
-                        for (int key: slidingWindow.keySet())
-                            System.out.println("key: " + key);
+                        // for (int key: slidingWindow.keySet())
+                        //    System.out.println("key: " + key);
 
                         ArrayList<Integer> flagBits = new ArrayList<>();
                         if (s == 1 || f == 1) { // receive a SYN or FIN from receiver
@@ -520,7 +520,8 @@ public class Sender {
                                         open.setValue(false);
                                         //stopSend = true;
                                         stopSend.setValue(true);
-                                        System.out.println("StopSend Change to: " + stopSend.getValue());
+                                        System.out.println("----------------Sender Termination--------------" );
+                                        System.exit(0);
                                     }
                                 };
                                 finTimer.schedule(fin, 16*timeout/1000000);
@@ -589,7 +590,7 @@ public class Sender {
                             // System.out.println("send stop: " + stopSend);
                             //System.out.println("open: " + open + " finalPacket: " + finalPacket);
                             if (open.getValue() == true && finalPacket.getValue() == false) { // send data
-                                System.out.println("Sender: Sending thread sending......");
+                                // System.out.println("Sender: Sending thread sending......");
                                 // determine how many bytes to send OR wait
                                 long remainingBytes = file.length() - 1 - lastSent;
                                 int swCapacity = sws - (lastSent - lastAcked);
