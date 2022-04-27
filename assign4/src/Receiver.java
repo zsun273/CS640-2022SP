@@ -175,7 +175,7 @@ public class Receiver {
                     if (s == 1 || f == 1) {
                         if (f == 1) {
                             flagBits.add(FIN);
-			                this.stopReceive = true;
+			                //this.stopReceive = true;
                             fileWriter.close();
                         }
                         if (s == 1) {
@@ -229,6 +229,17 @@ public class Receiver {
 
     }
 
+    private void setTimeout() {
+        Timer timer = new Timer();
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                stopReceive = true;
+            }
+        };
+        timer.schedule(task, 10000);
+    }
+
 
     private void updateAfterReceive(byte[] data) {
         int lengthNFlags = getLengthNFlags(data);
@@ -269,6 +280,9 @@ public class Receiver {
             } else {
                 receiverACK = receivedSeqNum + 1;
             }
+        } else if (a == 1) {
+            if (getAckNum(data) == 2)
+                stopReceive = true;
         }
 
     }
