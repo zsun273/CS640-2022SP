@@ -576,7 +576,7 @@ public class Sender {
         public void run() {
                 //System.out.println("stopSend: " + stopSend + " open: "+ open + " finalPacket: "+ finalPacket);
                 try {
-                        synchronized (stopSend) {
+                        //synchronized (stopSend) {
                             while (stopSend == false) {
 
                                 // wait for connection established
@@ -615,7 +615,7 @@ public class Sender {
 
                                 }
                             }
-                        }
+                        //}
 
                 } catch (Exception e) {
                     e.printStackTrace();
