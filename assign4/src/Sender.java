@@ -252,7 +252,7 @@ public class Sender {
         
         timerMap.put(seqNum, timer);
         timesMap.put(seqNum, times);
-        long time = timeout > 0 ? timeout/Math.pow(10, 6) : 1000;
+        long time = timeout > 0 ? (long)timeout/1000000 : 1000;
         System.out.println("Add " + seqNum + " a timeout " + time);
         timer.schedule(new TimeCheck(seqNum, packet), time);
     }
@@ -306,8 +306,7 @@ public class Sender {
         packet.put(checkSumBytes);
         packet.put(payload);
 
-        if (payload.length > 0 )
-            slidingWindow.put(sequenceNum, packet.array());
+        slidingWindow.put(sequenceNum, packet.array());
 
         if (checkSum == 0){
             checkSum = computeCheckSum(packet.array());

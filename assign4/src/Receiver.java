@@ -125,8 +125,9 @@ public class Receiver {
 
                     // check if out-of-sequence
                     if (s == 1 || f == 1 || length > 0){
-                        if (receiverACK != getSequenceNum(incomingData)) {
+                        if (receiverACK < getSequenceNum(incomingData)) {
                             // incoming packet's sequence number not what receiver expected
+                            System.out.println("Expected Seq: " + receiverACK + " Actual Seq: "+ getSequenceNum(incomingData));
                             numOutOfSeq ++;
                             // put out-of-sequence packet into buffer
                             if (buffer.size() < sws){
@@ -140,6 +141,7 @@ public class Receiver {
                             }
 
                         }
+                        
                     }
 
                     // TODO: check if ACK number
@@ -161,8 +163,11 @@ public class Receiver {
                     output(incomingData, false);
 
                     // update variables after receiving the packet
-                    updateAfterReceive(incomingData);
+                    if (receiverACK == getSequenceNum(incomingData)){
+                        updateAfterReceive(incomingData);
+                    }
 
+                    System.out.println("open status: " + open + " length: " + length);
                     // send a packet back to Sender
                     // if we receive a syn -> send back syn and ack
                     // if we receive fin -> send back ack and fin
@@ -184,7 +189,9 @@ public class Receiver {
                         output(returnPacket, true);
 
                         // update variables after sending the packet
-                        updateAfterSend(returnPacket);
+                        if (receiverACK == getSequenceNum(incomingData)){
+                            updateAfterSend(returnPacket);
+                        }
                     }
                     else if (length > 0) {// if we receive data -> send back ack
                         if (open == true){
@@ -196,7 +203,9 @@ public class Receiver {
                             output(returnPacket, true);
 
                             // update variables after sending the packet
-                            updateAfterSend(returnPacket);
+                            if (receiverACK == getSequenceNum(incomingData)){
+                                updateAfterSend(returnPacket);
+                            }
                         }
                     }
                     else {
