@@ -23,6 +23,11 @@ import java.util.*;
     2): update rtt (timeout) according to acked packet time
  */
 public class Sender {
+    class Control {
+        public volatile boolean stopSend;
+    }
+
+    final Control control = new Control();
     private DatagramSocket senderSocket;
     private int senderPort;
     private String remoteIP;
@@ -91,6 +96,7 @@ public class Sender {
         }
 	    this.open = false;
 	    this.stopSend = false;
+	    this.control.stopSend = false;
 	    this.finalPacket = false;
 
         this.startTime = System.nanoTime();
@@ -465,7 +471,7 @@ public class Sender {
 
                 try {
                     //synchronized (stopSend) {
-                        while (stopSend == false) {
+                        while (control.stopSend == false) {
                             System.out.println("Sender: Receiving thread receiving......");
                             senderSocket.receive(incomingPacket);
 
@@ -509,7 +515,7 @@ public class Sender {
                                             public void run() {
                                                 //synchronized (stopSend) {
                                                     open = false;
-                                                    stopSend = true;
+                                                    control.stopSend = true;
                                                     System.out.println("Connection terminated. Open is False. Stop Sending");
                                                 //}
                                             }
@@ -577,7 +583,7 @@ public class Sender {
                 //System.out.println("stopSend: " + stopSend + " open: "+ open + " finalPacket: "+ finalPacket);
                 try {
                         //synchronized (stopSend) {
-                            while (stopSend == false) {
+                            while (control.stopSend ==  false) {
 
                                 // wait for connection established
                                 // System.out.println("send stop: " + stopSend);
