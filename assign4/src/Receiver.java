@@ -45,6 +45,7 @@ public class Receiver {
 
     boolean open;
     boolean stopReceive;
+    boolean update;
     private long startTime;
     private FileOutputStream fileWriter;
     private int dataWritten;
@@ -68,6 +69,7 @@ public class Receiver {
         this.receiverACK = 0;
         this.open = false;
         this.stopReceive = false;
+        this.update = false;
         this.buffer = new HashMap<>();
 
         this.startTime = System.nanoTime();
@@ -128,7 +130,6 @@ public class Receiver {
                     if (s == 1 || f == 1 || length > 0){
                         if (receiverACK < getSequenceNum(incomingData)) {
                             // incoming packet's sequence number not what receiver expected
-                            System.out.println("Expected Seq: " + receiverACK + " Actual Seq: "+ getSequenceNum(incomingData));
                             numOutOfSeq ++;
                             // put out-of-sequence packet into buffer
                             if (buffer.size() < sws){
@@ -166,6 +167,10 @@ public class Receiver {
                     // update variables after receiving the packet
                     if (receiverACK == getSequenceNum(incomingData)){
                         updateAfterReceive(incomingData);
+                        update = true;
+                    }
+                    else{
+                        update = false;
                     }
 
                     System.out.println("open status: " + open + " length: " + length);
@@ -191,13 +196,17 @@ public class Receiver {
 
                         // print out the sent packet
                         output(returnPacket, true);
-
+                           
+                        System.out.println("Expected Seq: " + receiverACK + " Actual Seq: "+ getSequenceNum(incomingData));
                         // update variables after sending the packet
-                        if (receiverACK == getSequenceNum(incomingData)){
+                        if (update){              
                             updateAfterSend(returnPacket);
                         }
                     }
                     else if (length > 0) {// if we receive data -> send back ack
+                        if (getAckNum(incomingData) == 1) {
+                            open = true;
+                        }
                         if (open == true){
                             flagBits.add(ACK);
                             byte[] returnPacket = createPacket(nextSeqNum, new byte[0], flagBits, getTimeStamp(incomingData));
@@ -207,7 +216,7 @@ public class Receiver {
                             output(returnPacket, true);
 
                             // update variables after sending the packet
-                            if (receiverACK == getSequenceNum(incomingData)){
+                            if (update){
                                 updateAfterSend(returnPacket);
                             }
                         }
@@ -311,6 +320,7 @@ public class Receiver {
             } else {
                 nextSeqNum = sequenceNum + 1;
             }
+            System.out.println("nextSeqnum updated to: " + nextSeqNum);
         }
     }
 

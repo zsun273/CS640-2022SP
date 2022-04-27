@@ -231,9 +231,9 @@ public class Sender {
             System.out.println("Connection established. Open is True");
         }
         if (f == 1){
-            open = false;
-            //stopSend = true;
-            System.out.println("Connection terminated. Open is False. Stop Sending");
+            // open = false;
+            // stopSend = true;
+            // System.out.println("Connection terminated. Open is False. Stop Sending");
         }
     }
 
@@ -452,7 +452,7 @@ public class Sender {
                 try {
 
                     while (stopSend == false) {
-                        //System.out.println("Sender: Receiving thread receiving......");
+                        System.out.println("Sender: Receiving thread receiving......");
                         senderSocket.receive(incomingPacket);
 
                         int lengthNFlags = getLengthNFlags(incomingData);
@@ -487,14 +487,17 @@ public class Sender {
                         ArrayList<Integer> flagBits = new ArrayList<>();
                         if (s == 1 || f == 1) { // receive a SYN or FIN from receiver
                             if (f == 1) {
+                                System.out.println("final time out starts");
                                 Timer finTimer = new Timer();
                                 TimerTask fin = new TimerTask() {
                                     @Override
-                                    public void run() {
+                                    public synchronized void run() {
+                                        open = false;
                                         stopSend = true;
+                                        System.out.println("Connection terminated. Open is False. Stop Sending");
                                     }
                                 };
-                                finTimer.schedule(fin, 16*timeout);
+                                finTimer.schedule(fin, 16*timeout/1000000);
                             }
                             flagBits.add(ACK);
                             byte[] ackPacket = createPacket(lastSent + 1, new byte[0], flagBits);
@@ -557,10 +560,10 @@ public class Sender {
                         while (stopSend == false) {
 
                             // wait for connection established
-//System.out.println("send stop: " + stopSend);
+                            // System.out.println("send stop: " + stopSend);
                             //System.out.println("open: " + open + " finalPacket: " + finalPacket);
                             if (open == true && finalPacket == false) { // send data
-                                // System.out.println("Sender: Sending thread sending......");
+                                System.out.println("Sender: Sending thread sending......");
                                 // determine how many bytes to send OR wait
                                 long remainingBytes = file.length() - 1 - lastSent;
                                 int swCapacity = sws - (lastSent - lastAcked);
