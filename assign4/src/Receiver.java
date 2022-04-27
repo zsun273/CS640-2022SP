@@ -164,13 +164,11 @@ public class Receiver {
                     // print out the received packet
                     output(incomingData, false);
 
+                    System.out.println("Expected Seq: " + receiverACK + " Actual Seq: "+ getSequenceNum(incomingData));
                     // update variables after receiving the packet
                     if (receiverACK == getSequenceNum(incomingData)){
                         updateAfterReceive(incomingData);
-                        update = true;
-                    }
-                    else{
-                        update = false;
+                        // update = true;
                     }
 
                     System.out.println("open status: " + open + " length: " + length);
@@ -181,11 +179,13 @@ public class Receiver {
                     if (s == 1 || f == 1) {
                         if (f == 1) {
                             flagBits.add(FIN);
+                            nextSeqNum = 1;
 			                //this.stopReceive = true;
                             fileWriter.close();
                         }
                         if (s == 1) {
                             flagBits.add(SYN);
+                            nextSeqNum = 0;
                         }
                         flagBits.add(ACK);
                         byte[] returnPacket = createPacket(nextSeqNum, new byte[0], flagBits, getTimeStamp(incomingData));
@@ -197,11 +197,10 @@ public class Receiver {
                         // print out the sent packet
                         output(returnPacket, true);
                            
-                        System.out.println("Expected Seq: " + receiverACK + " Actual Seq: "+ getSequenceNum(incomingData));
                         // update variables after sending the packet
-                        if (update){              
-                            updateAfterSend(returnPacket);
-                        }
+                        // if (update){              
+                        //    updateAfterSend(returnPacket);
+                        // }
                     }
                     else if (length > 0) {// if we receive data -> send back ack
                         if (getAckNum(incomingData) == 1) {
@@ -209,16 +208,16 @@ public class Receiver {
                         }
                         if (open == true){
                             flagBits.add(ACK);
-                            byte[] returnPacket = createPacket(nextSeqNum, new byte[0], flagBits, getTimeStamp(incomingData));
+                            byte[] returnPacket = createPacket(1, new byte[0], flagBits, getTimeStamp(incomingData));
                             listenSocket.send(new DatagramPacket(returnPacket, returnPacket.length, senderAddr, senderPort));
 
                             // print out the sent packet
                             output(returnPacket, true);
 
                             // update variables after sending the packet
-                            if (update){
-                                updateAfterSend(returnPacket);
-                            }
+                            //if (update){
+                            //    updateAfterSend(returnPacket);
+                            //}
                         }
                     }
                     else {
