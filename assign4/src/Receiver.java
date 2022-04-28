@@ -95,10 +95,10 @@ public class Receiver {
                 //DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
 
                 while(stopReceive == false){
-                    byte[] incomingData = new byte[mtu];
+                    byte[] incomingData = new byte[24 + mtu];
 		            DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
 		    // Receiving
-                    //System.out.println("Receiver: receiving date.....");
+                    // System.out.println("Receiver: receiving data.....");
                     listenSocket.receive(incomingPacket);
 
                     int lengthNFlags = getLengthNFlags(incomingData);
@@ -107,11 +107,11 @@ public class Receiver {
                     int f = getFlag(lengthNFlags, FIN);
                     int a = getFlag(lengthNFlags, ACK);
 
-                    // incomingData = slicingByteArray(incomingData, 0, incomingPacket.getLength());
-//                    for(int i=0; i< incomingData.length ; i++) {
-//                        System.out.print(incomingData[i] +" ");
-//                    }
-//		            System.out.println();
+                    //incomingData = slicingByteArray(incomingData, 0, incomingPacket.getLength());
+                    //for(int i=0; i< incomingData.length ; i++) {
+                    //    System.out.print(incomingData[i] +" ");
+                    //}
+		            //System.out.println();
 
                     short originalChecksum = getCheckSum(incomingData);
                     // reset checksum to zero
@@ -130,6 +130,7 @@ public class Receiver {
                     if (s == 1 || f == 1 || length > 0){
                         if (receiverACK < getSequenceNum(incomingData)) {
                             // incoming packet's sequence number not what receiver expected
+                            System.out.println("Receive out of sequence.");
                             numOutOfSeq ++;
                             // put out-of-sequence packet into buffer
                             if (buffer.size() < sws){
@@ -265,7 +266,7 @@ public class Receiver {
 
                 try {
                     byte[] payload = getPayload(data);
-                    //System.out.println("Datawritten: " + dataWritten + "Payload length:" + payload.length + "Length: " + length);
+                    System.out.println("Datawritten: " + dataWritten + " Payload length:" + payload.length + "Length: " + length);
                     fileWriter.write(payload, 0, length);
                     dataWritten += length;
                 } catch (IOException e) {
@@ -275,7 +276,7 @@ public class Receiver {
                 try{
                     while(buffer.containsKey(dataWritten)) { // buffer contains next sequence number
                         byte[] payload = getPayload(buffer.get(dataWritten));
-                        fileWriter.write(payload, dataWritten, length);
+                        fileWriter.write(payload, 0, length);
                         buffer.remove(dataWritten);
                         dataWritten += length;
                         //System.out.println(length + " bytes of data written");

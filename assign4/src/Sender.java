@@ -637,6 +637,12 @@ public class Sender {
                                         setTimeOut(lastSent + 1, packet);
                                         output(packet, true);
                                         updateAfterSend(packet);
+
+                                        // incomingData = slicingByteArray(incomingData, 0, incomingPacket.getLength());
+                                        // for(int i=0; i< packet.length ; i++) {
+                                        //    System.out.print(packet[i] +" ");
+                                        //}
+		                                //System.out.println();
                                     }
                                 }
 
