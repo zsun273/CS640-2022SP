@@ -242,11 +242,11 @@ public class Sender {
                 for (int key : slidingWindow.keySet()) { // remove acked data from buffer
                     if (key <= lastAcked) {
                         System.out.println("remove " + key + " timer");
-                        slidingWindow.remove(key);
-                        flagWindow.remove(key);
                         timerMap.get(key).cancel();
                         timerMap.remove(key);
                         timesMap.remove(key);
+                        slidingWindow.remove(key);
+                        flagWindow.remove(key);
                     }
                 }
             }
