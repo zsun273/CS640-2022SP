@@ -611,11 +611,13 @@ public class Sender {
                                 // System.out.println("Sender: Sending thread sending......");
                                 // determine how many bytes to send OR wait
                                 long remainingBytes = file.length() - 1 - lastSent;
-                                int swCapacity = sws - (lastSent - lastAcked);
+                                int swCapacity = sws - slidingWindow.keySet().size();
+                                if (swCapacity <= 0)
+                                    continue;
 
                                 // data can be sent would be the min(remaining, swCapacity, mtu)
-                                int sentSize = Math.min((int) remainingBytes, swCapacity);
-                                sentSize = Math.min(sentSize, mtu);
+                                int sentSize = Math.min((int) remainingBytes, mtu);
+                                //sentSize = Math.min(sentSize, mtu);
                                 if (sentSize > 0) {
                                     if (sentSize == remainingBytes){
                                         //finalPacket = true;
