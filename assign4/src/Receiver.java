@@ -98,7 +98,7 @@ public class Receiver {
                     byte[] incomingData = new byte[mtu];
 		            DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
 		    // Receiving
-                    System.out.println("Receiver: receiving date.....");
+                    //System.out.println("Receiver: receiving date.....");
                     listenSocket.receive(incomingPacket);
 
                     int lengthNFlags = getLengthNFlags(incomingData);
@@ -153,14 +153,14 @@ public class Receiver {
                     // print out the received packet
                     output(incomingData, false);
 
-                    System.out.println("Expected Seq: " + receiverACK + " Actual Seq: "+ getSequenceNum(incomingData));
+                    //System.out.println("Expected Seq: " + receiverACK + " Actual Seq: "+ getSequenceNum(incomingData));
                     // update variables after receiving the packet
                     if (receiverACK == getSequenceNum(incomingData)){
                         updateAfterReceive(incomingData);
                         // update = true;
                     }
 
-                    System.out.println("open status: " + open + " length: " + length);
+                    //System.out.println("open status: " + open + " length: " + length);
                     // send a packet back to Sender
                     // if we receive a syn -> send back syn and ack
                     // if we receive fin -> send back ack and fin
@@ -265,7 +265,7 @@ public class Receiver {
 
                 try {
                     byte[] payload = getPayload(data);
-                    System.out.println("Datawritten: " + dataWritten + "Payload length:" + payload.length + "Length: " + length);
+                    //System.out.println("Datawritten: " + dataWritten + "Payload length:" + payload.length + "Length: " + length);
                     fileWriter.write(payload, 0, length);
                     dataWritten += length;
                 } catch (IOException e) {
@@ -278,7 +278,7 @@ public class Receiver {
                         fileWriter.write(payload, dataWritten, length);
                         buffer.remove(dataWritten);
                         dataWritten += length;
-                        System.out.println(length + " bytes of data written");
+                        //System.out.println(length + " bytes of data written");
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -312,7 +312,7 @@ public class Receiver {
             } else {
                 nextSeqNum = sequenceNum + 1;
             }
-            System.out.println("nextSeqnum updated to: " + nextSeqNum);
+            //System.out.println("nextSeqnum updated to: " + nextSeqNum);
         }
     }
 
