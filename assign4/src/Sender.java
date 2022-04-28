@@ -299,11 +299,24 @@ public class Sender {
 
         public void run() { // resend package if timeout
             try {
-                ArrayList<Integer> flags = flagWindow.get(seqNum);
+                //ArrayList<Integer> flags = flagWindow.get(seqNum);
 
-                byte[] data = createPacket(seqNum, slidingWindow.get(seqNum), flags);
+                //byte[] data = createPacket(seqNum, slidingWindow.get(seqNum), flags);
+                byte[] timestamp = ByteBuffer.allocate(8).putLong(System.nanoTime()).array();
+                for (int i = 0; i < 8; i++) {
+                    packet[8+i] = timestamp[i];
 
-                DatagramPacket udpPacket = new DatagramPacket(data, data.length, InetAddress.getByName(remoteIP), receiverPort);
+}
+                for (int i = 0; i < 2; i++) {
+                    packet[22+i] = 0;
+}
+                short checksum = computeCheckSum(packet);
+                byte[] checksumArr = ByteBuffer.allocate(2).putShort(checksum).array();
+                for (int i = 0; i < 2; i++) {
+                    packet[22+i] = checksumArr[i];
+}
+
+                DatagramPacket udpPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(remoteIP), receiverPort);
                 senderSocket.send(udpPacket);
 
                 setTimeOut(getSequenceNum(packet), packet); // put a new timer after this
