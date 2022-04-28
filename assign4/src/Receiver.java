@@ -146,17 +146,6 @@ public class Receiver {
                         
                     }
 
-                    // TODO: check if ACK number
-//                    if (a == 1) { // this packet contains ack number
-//                        if (nextSeqNum != getAckNum(incomingData)){
-//                            // the ACK number sender sends back is not what we expected
-//                            // something wrong with previous packet
-//
-//                            // resend previous packet
-//                            continue;
-//                        }
-//                    }
-
                     // check complete, handle incoming packet and send back corresponding ack
                     int senderPort = incomingPacket.getPort();
                     InetAddress senderAddr = incomingPacket.getAddress();
@@ -229,6 +218,10 @@ public class Receiver {
                     }
 
                 }
+                System.out.println("Amount of data received: " + dataReceived);
+                System.out.println("Number of packets received: " + numPacketsReceived);
+                System.out.println("Number of out-of-sequence: " + numOutOfSeq);
+                System.out.println("Number of packets discarded due to checksum: " + wrongCheckSum);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -405,17 +398,6 @@ public class Receiver {
     }
 
     public byte[] getPayload(byte[] packet) {
-//        int end = packet.length;
-//        for(int i = packet.length-1; i >=24; i--){
-//            if (packet[i] == (byte)0){
-//                continue;
-//            }
-//            else{
-//                end = i;
-//                break;
-//            }
-//        }
-//        return slicingByteArray(packet, 24, end+1);
         return slicingByteArray(packet, 24, packet.length);
     }
 

@@ -94,6 +94,7 @@ public class Sender {
     private volatile int dataTransfered;
     private volatile int numPacketsSent;
     private volatile int getNumRetransmission;
+    private volatile int checkSumFailed;
     private volatile int numDupAcks;
 
     //private Object lock = new Object();
@@ -132,6 +133,7 @@ public class Sender {
         this.dataTransfered = 0;
         this.numPacketsSent = 0;
         this.getNumRetransmission = 0;
+        this.checkSumFailed = 0;
         this.numDupAcks = 0;
 
         System.out.println("Sender: from port: " + senderPort + " to port: " + receiverPort);
@@ -505,6 +507,7 @@ public class Sender {
                         if (currChecksum != originalChecksum) {
                             System.out.println("Check sum failed! Data Corrupted!");
                             // drop the packet
+                            checkSumFailed ++;
                             continue;
                         }
 
@@ -531,6 +534,11 @@ public class Sender {
                                         //stopSend = true;
                                         stopSend.setValue(true);
                                         System.out.println("----------------Sender Termination--------------" );
+                                        System.out.println("Amount of data transferred: " + dataTransfered);
+                                        System.out.println("Number of packets sent: " + numPacketsSent);
+                                        System.out.println("Number of packets discarded due to checksum: " + checkSumFailed);
+                                        System.out.println("Number of retransmission: " + getNumRetransmission);
+                                        System.out.println("Number of duplicate acks: " + numDupAcks);
                                         System.exit(0);
                                     }
                                 };
