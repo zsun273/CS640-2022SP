@@ -8,6 +8,7 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /*
     Sender class
@@ -74,11 +75,11 @@ public class Sender {
     private static final int ACK = 0;
     private static final int NUM_RETRANSMISSION = 16;
 
-    private HashMap<Integer, byte[]> slidingWindow; // packets in sliding window are sent but unacked packets
-    private HashMap<Integer, ArrayList<Integer>> flagWindow; // parallel to slidingwindow, stores flagbits of packets
+    private ConcurrentHashMap<Integer, byte[]> slidingWindow; // packets in sliding window are sent but unacked packets
+    private ConcurrentHashMap<Integer, ArrayList<Integer>> flagWindow; // parallel to slidingwindow, stores flagbits of packets
     private long timeout;  // timeout, update after each packet received
-    private HashMap<Integer, Timer> timerMap; // map stores packet -> a timer corresponds to it
-    private HashMap<Integer, Integer> timesMap; // map stores packet -> send times
+    private ConcurrentHashMap<Integer, Timer> timerMap; // map stores packet -> a timer corresponds to it
+    private ConcurrentHashMap<Integer, Integer> timesMap; // map stores packet -> send times
     private int payloadsize;
 
     public volatile MyBoolean open = new MyBoolean(false);
@@ -120,13 +121,13 @@ public class Sender {
 
         this.startTime = System.nanoTime();
         this.timeout = 0;
-        this.timerMap = new HashMap<>();
-        this.timesMap = new HashMap<>();
+        this.timerMap = new ConcurrentHashMap<>();
+        this.timesMap = new ConcurrentHashMap<>();
         this.lastSent = -1;
         this.currAck = 0;
         this.lastAcked = -1;
-        this.slidingWindow = new HashMap<>(sws); // assigning a size may not work here as hashmap can resize itself?
-        this.flagWindow = new HashMap<>();
+        this.slidingWindow = new ConcurrentHashMap<>(sws); // assigning a size may not work here as hashmap can resize itself?
+        this.flagWindow = new ConcurrentHashMap<>();
         
         // mtu - header: (seq number + ack + timestamp + length + flag + all zero + checksum)
         this.payloadsize = mtu - 24;
