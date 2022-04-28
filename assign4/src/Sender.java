@@ -241,7 +241,7 @@ public class Sender {
                 dupAckTimes = 0;
                 for (int key : slidingWindow.keySet()) { // remove acked data from buffer
                     if (key <= lastAcked) {
-                        System.out.println("remove " + key + " timer");
+                        //System.out.println("remove " + key + " timer");
                         timerMap.get(key).cancel();
                         timerMap.remove(key);
                         timesMap.remove(key);
@@ -284,7 +284,7 @@ public class Sender {
         timerMap.put(seqNum, timer);
         timesMap.put(seqNum, times);
         long time = timeout > 0 ? (long)timeout/1000000 : 1000;
-        System.out.println("Add " + seqNum + " a timeout " + time);
+        //System.out.println("Add " + seqNum + " a timeout " + time);
         timer.schedule(new TimeCheck(seqNum, packet), time);
     }
 
@@ -443,7 +443,7 @@ public class Sender {
 
     // not sure if correct
     private short computeCheckSum(byte[] packet) {
-        System.out.println("packet length: " + packet.length);
+        //System.out.println("packet length: " + packet.length);
 	    ByteBuffer bb = ByteBuffer.wrap(packet);
         bb.rewind();
         int accumulation = 0;
@@ -465,12 +465,12 @@ public class Sender {
         
         if (sequenceNum == 0){
             ERTT = System.nanoTime() - timeStamp;
-            System.out.println("ERTT: " + ERTT/1000000);
+            //System.out.println("ERTT: " + ERTT/1000000);
             EDEV = 0;
             T0 = 2*ERTT;
         } else {
             SRTT = System.nanoTime() - timeStamp;
-            System.out.println("SRTT: " + SRTT/1000000);
+           // System.out.println("SRTT: " + SRTT/1000000);
             SDEV = Math.abs(SRTT - ERTT);
             ERTT = (long) (0.875 * ERTT + (1-0.875) * SRTT);
             EDEV = (long) (0.75*EDEV + (1-0.75) * SDEV);
