@@ -234,7 +234,7 @@ public class Sender {
                             DatagramPacket udpPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(remoteIP), receiverPort);
                             senderSocket.send(udpPacket);
 
-                            //setTimeOut(getSequenceNum(packet), packet); // put a new timer after this
+                            setTimeOut(getSequenceNum(packet), packet); // put a new timer after this
                             output(packet, true);
                             getNumRetransmission++;
                         } catch (Exception e) {
@@ -249,8 +249,8 @@ public class Sender {
                     if (key <= lastAcked) {
                         //System.out.println("remove " + key + " timer");
                         timerMap.get(key).cancel();
-                        timer.purge();
                         timerMap.remove(key);
+                        timer.purge();
                         timesMap.remove(key);
                         slidingWindow.remove(key);
                         flagWindow.remove(key);
