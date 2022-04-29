@@ -314,7 +314,10 @@ public class Sender {
                 //ArrayList<Integer> flags = flagWindow.get(seqNum);
                 if (seqNum < lastAcked) {
                     timesMap.remove(seqNum);
-                    timerMap.get(seqNum).cancel();
+                    if (timerMap.get(seqNum) != null) {
+                        timerMap.get(seqNum).cancel();
+                        timerMap.remove(seqNum);
+                    }
                     timer.purge();
                 }
                 int times = timesMap.getOrDefault(seqNum, 0) + 1;
