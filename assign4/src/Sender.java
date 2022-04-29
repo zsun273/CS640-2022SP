@@ -294,20 +294,13 @@ public class Sender {
 
         TimerTask task = new TimeCheck(seqNum, packet);
         
-
+        timerMap.put(seqNum, task);
         //timesMap.put(seqNum, times);
 
         long time = timeout > 0 ? (long)timeout/1000000 : 5000;
         //System.out.println("Add " + seqNum + " a timeout " + time);
-        time = time > 0 ? time : 100;
-        try {
-            timerMap.put(seqNum, task);
-            timer.schedule(task, time, time);
-        } catch (IllegalStateException e) {
-            System.out.println("Illegal state exception for timertask: " + seqNum);
-            System.out.println("Get timertask from timermap: " + timerMap.get(seqNum));
-            System.exit(0);
-        }
+        time = time > 0 ? time : 100;   
+        timer.schedule(task, time, time);
 
     }
 
