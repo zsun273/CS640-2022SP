@@ -9,6 +9,7 @@ import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.lang.*;
 
 /*
     Sender class
@@ -78,8 +79,8 @@ public class Sender {
     private ConcurrentHashMap<Integer, byte[]> slidingWindow; // packets in sliding window are sent but unacked packets
     private ConcurrentHashMap<Integer, ArrayList<Integer>> flagWindow; // parallel to slidingwindow, stores flagbits of packets
     private long timeout;  // timeout, update after each packet received
-    private ConcurrentHashMap<Integer, Timer> timerMap; // map stores packet -> a timer corresponds to it
-    //private ConcurrentHashMap<Integer, Integer> timesMap; // map stores packet -> send times
+    private ConcurrentHashMap<Integer, TimerTask> timerMap; // map stores packet -> a timer corresponds to it
+    private ConcurrentHashMap<Integer, Integer> timesMap; // map stores packet -> send times
     private int payloadsize;
 
     public volatile MyBoolean open = new MyBoolean(false);
@@ -122,7 +123,7 @@ public class Sender {
         this.startTime = System.nanoTime();
         this.timeout = 0;
         this.timerMap = new ConcurrentHashMap<>();
-        //this.timesMap = new ConcurrentHashMap<>();
+        this.timesMap = new ConcurrentHashMap<>();
         this.lastSent = -1;
         this.currAck = 0;
         this.lastAcked = -1;
@@ -150,8 +151,10 @@ public class Sender {
 
         try {
             ReceiveThread rthread = new ReceiveThread();
+            //rthread.setPriority(10);
             rthread.start();
             SendThread sthread = new SendThread();
+            //sthread.setPriority(2);
             sthread.start();
             System.out.println("Sender start listening with port " + senderPort);
         } catch (Exception e) {
@@ -221,6 +224,7 @@ public class Sender {
                 dupAckTimes ++;
                 numDupAcks ++;
                 if (dupAckTimes >= 3) {
+                    dupAckTimes = 0;
                     for (int key : slidingWindow.keySet()) {
                         byte[] payload = slidingWindow.get(key);
                         ArrayList<Integer> flags = flagWindow.get(key);
@@ -240,12 +244,13 @@ public class Sender {
             } else { // normal
                 lastAcked = getAckNum(data) - 1;
                 dupAckTimes = 0;
-                for (int key : slidingWindow.keySet()) { // remove acked data from buffer
+                for (int key : timerMap.keySet()) { // remove acked data from buffer
                     if (key <= lastAcked) {
                         //System.out.println("remove " + key + " timer");
                         timerMap.get(key).cancel();
                         timerMap.remove(key);
-                        //timesMap.remove(key);
+                        timer.purge();
+                        timesMap.remove(key);
                         slidingWindow.remove(key);
                         flagWindow.remove(key);
                     }
@@ -270,43 +275,41 @@ public class Sender {
 
 
     private void setTimeOut(int seqNum, byte[] packet) {
-//        int times = timesMap.getOrDefault(seqNum, 0) + 1;
-//        if (times > NUM_RETRANSMISSION) { // need to halt the process, but how?
-//            System.out.println("Maximum transmission times of a single packet is reached. Transmission failed!!!");
-//            System.exit(0);
-//        }
-        Timer timer = new Timer();
+        int times = timesMap.getOrDefault(seqNum, 0) + 1;
+        if (times > NUM_RETRANSMISSION) { // need to halt the process, but how?
+            System.out.println("Maximum transmission times of a single packet is reached. Transmission failed!!!");
+            System.exit(0);
+        }
+        //Timer timer = new Timer();
 
         // cancel previous timer on the same packet if any
-        Timer preTimer = timerMap.get(seqNum);
-        if (preTimer != null)
+        TimerTask preTimer = timerMap.get(seqNum);
+        if (preTimer != null) {
             preTimer.cancel();
+            timer.purge();
+        }
+
+
+        TimerTask task = new TimeCheck(seqNum, packet);
         
-        timerMap.put(seqNum, timer);
-        //timesMap.put(seqNum, times);
+        timerMap.put(seqNum, task);
+        timesMap.put(seqNum, times);
         long time = timeout > 0 ? (long)timeout/1000000 : 1000;
         //System.out.println("Add " + seqNum + " a timeout " + time);
-        timer.schedule(new TimeCheck(seqNum, packet), time, time);
+        timer.schedule(new TimeCheck(seqNum, packet), time);
     }
 
     class TimeCheck extends TimerTask {
         int seqNum;
         byte[] packet;
-        int times;
         TimeCheck(int seqNum, byte[] data) {
             this.seqNum = seqNum;
             this.packet = data;
-            this.times = NUM_RETRANSMISSION;
         }
 
         public void run() { // resend package if timeout
             try {
                 //ArrayList<Integer> flags = flagWindow.get(seqNum);
-                times--;
-                if (times < 0) {
-                    System.out.println("Maximum transmission times of a single packet is reached. Transmission failed!!!");
-                    System.exit(0);
-                }
 
                 //byte[] data = createPacket(seqNum, slidingWindow.get(seqNum), flags);
                 byte[] timestamp = ByteBuffer.allocate(8).putLong(System.nanoTime()).array();
@@ -326,7 +329,7 @@ public class Sender {
                 DatagramPacket udpPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(remoteIP), receiverPort);
                 senderSocket.send(udpPacket);
 
-                //setTimeOut(getSequenceNum(packet), packet); // put a new timer after this
+                setTimeOut(getSequenceNum(packet), packet); // put a new timer after this
                 output(packet, true);
                 getNumRetransmission ++;
             } catch (Exception e) {

@@ -128,9 +128,9 @@ public class Receiver {
 
                     // check if out-of-sequence
                     if (s == 1 || f == 1 || length > 0){
-                        if (receiverACK < getSequenceNum(incomingData) && getSequenceNum(incomingData) <= receiverACK + mtu*sws) {
+                        if (receiverACK < getSequenceNum(incomingData)) {
                             // incoming packet's sequence number not what receiver expected
-                            //System.out.println("Receive out of sequence.");
+                            // System.out.println("Receive out of sequence.");
                             numOutOfSeq ++;
                             // put out-of-sequence packet into buffer
                             if (buffer.size() < sws){
@@ -139,7 +139,7 @@ public class Receiver {
                             }
                             else{
                                 // cannot put in buffer, drop and continue
-                                //System.out.println("Buffer full.");
+                                System.out.println("Buffer full.");
                                 continue;
                             }
 
@@ -159,6 +159,25 @@ public class Receiver {
                     if (receiverACK == getSequenceNum(incomingData)){
                         updateAfterReceive(incomingData);
                         // update = true;
+                    }
+
+                    // check if there is data in the buffer can be written
+                    try{
+                        while(buffer.containsKey(receiverACK)) { // buffer contains next sequence number
+                            incomingData = buffer.get(receiverACK); // change incoming data to the data we will write
+                            lengthNFlags = getLengthNFlags(incomingData);
+                            length = getLength(lengthNFlags);
+
+                            byte[] payload = getPayload(buffer.get(receiverACK));
+                            fileWriter.write(payload, 0, length);
+                            buffer.remove(receiverACK);
+                            receiverACK += length;
+                            System.out.println(length + " bytes of data written from buffer");
+                            System.out.println("Now Expected Sequence number change to: " + receiverACK); 
+                        
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
 
                     //System.out.println("open status: " + open + " length: " + length);
@@ -272,22 +291,6 @@ public class Receiver {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                // check if there is data in the buffer can be written
-                try{
-                    while(buffer.containsKey(receiverACK)) { // buffer contains next sequence number
-                        byte[] payload = getPayload(buffer.get(receiverACK));
-                        fileWriter.write(payload, 0, length);
-                        buffer.remove(receiverACK);
-                        dataWritten += length;
-receiverACK += length;
-System.out.println("HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-                        //System.out.println(length + " bytes of data written");
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-
             } else {
                 receiverACK = receivedSeqNum + 1;
             }
