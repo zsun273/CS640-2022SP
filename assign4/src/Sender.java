@@ -178,7 +178,7 @@ public class Sender {
 
         } catch (Exception e) {
             e.printStackTrace();
-            System.exit(3);
+            System.exit(2);
         }
     }
 

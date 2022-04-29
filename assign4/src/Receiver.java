@@ -172,7 +172,7 @@ public class Receiver {
                             fileWriter.write(payload, 0, length);
                             buffer.remove(receiverACK);
                             receiverACK += length;
-                            System.out.println(length + " bytes of data written from buffer");
+                            // System.out.println(length + " bytes of data written from buffer");
                             System.out.println("Now Expected Sequence number change to: " + receiverACK); 
                         
                         }
