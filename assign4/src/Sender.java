@@ -305,6 +305,7 @@ public class Sender {
         } catch (IllegalStateException e) {
             System.out.println("Illegal state exception for timertask: " + seqNum);
             System.out.println("Get timertask from timermap: " + timerMap.get(seqNum));
+            System.exit(0);
         }
 
     }
