@@ -174,7 +174,7 @@ public class Router extends Device
 
 		double rand = Math.random();
 		// dropping a pakcet with 5% probablity
-		if (rand < 0.00) {
+		if (rand < 0.05) {
 			System.out.println("Randomly dropping a packet");
 			return;
 		}
