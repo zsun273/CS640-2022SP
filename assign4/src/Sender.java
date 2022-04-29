@@ -226,18 +226,18 @@ public class Sender {
                 numDupAcks ++;
                 if (dupAckTimes >= 3) {
                     dupAckTimes = 0;
-                    for (int key : slidingWindow.keySet()) {
-                        byte[] payload = slidingWindow.get(key);
-                        ArrayList<Integer> flags = flagWindow.get(key);
-                        byte[] packet = createPacket(key, payload, flags);
+                    if (slidingWindow.containsKey(ack+1)) {
+                        byte[] payload = slidingWindow.get(ack+1);
+                        ArrayList<Integer> flags = flagWindow.get(ack+1);
+                        byte[] packet = createPacket(ack, payload, flags);
                         try {
                             DatagramPacket udpPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(remoteIP), receiverPort);
                             senderSocket.send(udpPacket);
 
                             setTimeOut(getSequenceNum(packet), packet); // put a new timer after this
                             output(packet, true);
-                            getNumRetransmission ++ ;
-                        } catch (Exception e){
+                            getNumRetransmission++;
+                        } catch (Exception e) {
                             e.printStackTrace();
                         }
                     }
