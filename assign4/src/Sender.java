@@ -284,12 +284,12 @@ public class Sender {
         //Timer timer = new Timer();
 
         // cancel previous timer on the same packet if any
-//        TimerTask preTimer = timerMap.get(seqNum);
-//        if (preTimer != null) {
-//            preTimer.cancel();
-//            timer.purge();
-//        }
-        timer.purge();
+        TimerTask preTimer = timerMap.get(seqNum);
+        if (preTimer != null) {
+            preTimer.cancel();
+            timer.purge();
+        }
+        //timer.purge();
 
 
         TimerTask task = new TimeCheck(seqNum, packet);
@@ -312,14 +312,6 @@ public class Sender {
         public void run() { // resend package if timeout
             try {
                 //ArrayList<Integer> flags = flagWindow.get(seqNum);
-                if (seqNum < lastAcked) {
-                    timesMap.remove(seqNum);
-                    if (timerMap.get(seqNum) != null) {
-                        timerMap.get(seqNum).cancel();
-                        timerMap.remove(seqNum);
-                    }
-                    timer.purge();
-                }
                 int times = timesMap.getOrDefault(seqNum, 0) + 1;
                 if (times > NUM_RETRANSMISSION) { // need to halt the process, but how?
                     System.out.println("Maximum transmission times of a single packet is reached. Transmission failed!!!");
