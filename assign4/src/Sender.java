@@ -635,7 +635,7 @@ public class Sender {
                             if (open.getValue() == true && finalPacket.getValue() == false) { // send data
                                 // System.out.println("Sender: Sending thread sending......");
                                 // determine how many bytes to send OR wait
-                                long remainingBytes = file.length() - 1 - lastSent;
+                                long remainingBytes = file.length() - lastSent;
                                 int swCapacity = sws - slidingWindow.keySet().size();
                                 if (swCapacity <= 0)
                                     continue;
