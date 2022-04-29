@@ -302,6 +302,7 @@ public class Sender {
         timer.schedule(task, time, time);}
         catch (IllegalArgumentException e) {
             System.out.println("Illegal argument time: " + timeout/1000000);
+            System.exit(0);
         }
     }
 
