@@ -312,6 +312,11 @@ public class Sender {
         public void run() { // resend package if timeout
             try {
                 //ArrayList<Integer> flags = flagWindow.get(seqNum);
+                if (seqNum < lastAcked) {
+                    timesMap.remove(seqNum);
+                    timerMap.get(seqNum).cancel();
+                    timer.purge();
+                }
                 int times = timesMap.getOrDefault(seqNum, 0) + 1;
                 if (times > NUM_RETRANSMISSION) { // need to halt the process, but how?
                     System.out.println("Maximum transmission times of a single packet is reached. Transmission failed!!!");
