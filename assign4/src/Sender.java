@@ -109,6 +109,7 @@ public class Sender {
         this.mtu = mtu;
         this.sws = sws;
         this.dupAckTimes = 0;
+        this.timer = new Timer();
         
         try {
             this.file = new File(filename);
@@ -296,7 +297,7 @@ public class Sender {
         timesMap.put(seqNum, times);
         long time = timeout > 0 ? (long)timeout/1000000 : 1000;
         //System.out.println("Add " + seqNum + " a timeout " + time);
-        timer.schedule(new TimeCheck(seqNum, packet), time);
+        timer.schedule(task, time);
     }
 
     class TimeCheck extends TimerTask {
