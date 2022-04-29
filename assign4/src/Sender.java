@@ -276,28 +276,28 @@ public class Sender {
 
 
     private void setTimeOut(int seqNum, byte[] packet) {
-        int times = timesMap.getOrDefault(seqNum, 0) + 1;
-        if (times > NUM_RETRANSMISSION) { // need to halt the process, but how?
-            System.out.println("Maximum transmission times of a single packet is reached. Transmission failed!!!");
-            System.exit(0);
-        }
+//        int times = timesMap.getOrDefault(seqNum, 0) + 1;
+//        if (times > NUM_RETRANSMISSION) { // need to halt the process, but how?
+//            System.out.println("Maximum transmission times of a single packet is reached. Transmission failed!!!");
+//            System.exit(0);
+//        }
         //Timer timer = new Timer();
 
         // cancel previous timer on the same packet if any
-        TimerTask preTimer = timerMap.get(seqNum);
-        if (preTimer != null) {
-            preTimer.cancel();
-            timer.purge();
-        }
+//        TimerTask preTimer = timerMap.get(seqNum);
+//        if (preTimer != null) {
+//            preTimer.cancel();
+//            timer.purge();
+//        }
 
 
         TimerTask task = new TimeCheck(seqNum, packet);
         
         timerMap.put(seqNum, task);
-        timesMap.put(seqNum, times);
+        //timesMap.put(seqNum, times);
         long time = timeout > 0 ? (long)timeout/1000000 : 5000;
         //System.out.println("Add " + seqNum + " a timeout " + time);
-        timer.schedule(task, time);
+        timer.schedule(task, time, time);
     }
 
     class TimeCheck extends TimerTask {
@@ -311,6 +311,11 @@ public class Sender {
         public void run() { // resend package if timeout
             try {
                 //ArrayList<Integer> flags = flagWindow.get(seqNum);
+                int times = timesMap.getOrDefault(seqNum, 0) + 1;
+                if (times > NUM_RETRANSMISSION) { // need to halt the process, but how?
+                    System.out.println("Maximum transmission times of a single packet is reached. Transmission failed!!!");
+                    System.exit(0);
+                }
 
                 //byte[] data = createPacket(seqNum, slidingWindow.get(seqNum), flags);
                 byte[] timestamp = ByteBuffer.allocate(8).putLong(System.nanoTime()).array();
@@ -330,7 +335,8 @@ public class Sender {
                 DatagramPacket udpPacket = new DatagramPacket(packet, packet.length, InetAddress.getByName(remoteIP), receiverPort);
                 senderSocket.send(udpPacket);
 
-                setTimeOut(getSequenceNum(packet), packet); // put a new timer after this
+                //setTimeOut(getSequenceNum(packet), packet); // put a new timer after this
+                timesMap.put(seqNum, times);
                 output(packet, true);
                 getNumRetransmission ++;
             } catch (Exception e) {
