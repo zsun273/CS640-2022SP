@@ -300,7 +300,12 @@ public class Sender {
         long time = timeout > 0 ? (long)timeout/1000000 : 5000;
         //System.out.println("Add " + seqNum + " a timeout " + time);
         time = time > 0 ? time : 100;
-        timer.schedule(task, time, time);
+        try {
+            timer.schedule(task, time, time);
+        } catch (IllegalStateException e) {
+            System.out.println("Illegal state exception for timertask: " + seqNum);
+            System.out.println("Get timertask from timermap: " + timerMap.get(seqNum));
+        }
 
     }
 
