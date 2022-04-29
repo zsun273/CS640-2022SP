@@ -289,6 +289,7 @@ public class Sender {
 //            preTimer.cancel();
 //            timer.purge();
 //        }
+        timer.purge();
 
 
         TimerTask task = new TimeCheck(seqNum, packet);
