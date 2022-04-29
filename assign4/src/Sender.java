@@ -284,6 +284,8 @@ public class Sender {
         //Timer timer = new Timer();
 
         // cancel previous timer on the same packet if any
+        if (seqNum < lastAcked)
+            return;
         TimerTask preTimer = timerMap.get(seqNum);
         if (preTimer != null) {
             preTimer.cancel();
