@@ -296,9 +296,13 @@ public class Sender {
         
         timerMap.put(seqNum, task);
         //timesMap.put(seqNum, times);
+        try {
         long time = timeout > 0 ? (long)timeout/1000000 : 5000;
         //System.out.println("Add " + seqNum + " a timeout " + time);
-        timer.schedule(task, time, time);
+        timer.schedule(task, time, time);}
+        catch (IllegalArgumentException e) {
+            System.out.println("Illegal argument time: " + timeout/1000000);
+        }
     }
 
     class TimeCheck extends TimerTask {
